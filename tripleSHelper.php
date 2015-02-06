@@ -276,41 +276,31 @@
     /* getRadio5 : 5 point radiog : integer 1 to 5 */
     public function getList5Syntax($aField)
     {
-        return array(
-            'datasize'=>1,
-            '@attributes'=>array(
-                'type'=>'single',
-                'format'=>'numeric',
-            ),
-            'values'=>array(
-                'range'=>array(
-                    '@attributes'=>array(
-                        'from'=>$this->pluginSettings['listChoiceNoANswer']!='' ? '0' : '1' ,
-                        'to'=>'5',
-                    ),
-                )
-            ),
-        );
+        $aValue=array();
+        for ($iCount = 1; $iCount <= 5; $iCount++) {
+            $aValue=array(
+                '@value'=>$iCount,
+                '@attributes'=>array(
+                    'code'=>$iCount,
+                ),
+            );
+        }
+        return $this->getList($aValue,1);
     }
 
     /* getRadio5 : 10 point radio : integer 1 to 5 */
     public function getList10Syntax($aField)
     {
-        return array(
-            'datasize'=>2,
-            '@attributes'=>array(
-                'type'=>'single',
-                'format'=>'numeric',
-            ),
-            'values'=>array(
-                'range'=>array(
-                    '@attributes'=>array(
-                        'from'=>$this->pluginSettings['listChoiceNoANswer']!='' ? '0' : '1' ,
-                        'to'=>'10',
-                    ),
-                )
-            ),
-        );
+        $aValue=array();
+        for ($iCount = 1; $iCount <= 10; $iCount++) {
+            $aValue=array(
+                '@value'=>$iCount,
+                '@attributes'=>array(
+                    'code'=>$iCount,
+                ),
+            );
+        }
+        return $this->getList($aValue,2);
     }
     /* getListYUN : 10 point radio : integer 1 to 5 */
     public function getListYUNSyntax($aField)
@@ -452,7 +442,7 @@
 
     public function getList($aValues,$iSize=5)
     {
-        if($this->pluginSettings['listChoiceNoANswer']!='')
+        if($this->pluginSettings['listChoiceNoANswer']!='' && $iSize>=strlen($this->pluginSettings['listChoiceNoANswer']))
         {
             $aValues[]=array(
                         '@value'=>$this->translate("No answer"),

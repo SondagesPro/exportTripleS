@@ -27,7 +27,7 @@ class exportTripleS extends PluginBase {
 
         'listDocumentation'=>array(
             'type'=>'info',
-            'content'=>"<div class='alert alert-info'>For list of choice : you can set a specific string for No answer (différent from not seeing).</div>",
+            'content'=>"<div class='alert alert-info'><dl><dt>For list of choice</dt><dd>You can set a specific string for No answer code (différent from not seeing).</dd><dd>If length of this string is up at default question type length (or is empty) : No answer don't have specific code.</dd></dl></div>",
         ),
         'listChoiceNoANswer'=>array(
             'type'=>'string',

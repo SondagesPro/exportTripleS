@@ -177,7 +177,7 @@ class exportTripleSDataWriter extends Writer {
         if(is_null($sValue))
             return str_repeat (" ",$iSize);
         // Fix value not in array ?
-        if($sValue=="")
+        if($sValue=="" && $iSize>=strlen($this->pluginSettings['listChoiceNoANswer']))
             $sValue=$this->pluginSettings['listChoiceNoANswer'];
         return str_pad($sValue,$iSize," ");
     }
