@@ -22,12 +22,23 @@ class exportTripleS extends PluginBase {
     protected $storage = 'DbStorage';
     static protected $name = 'Export Triple S';
     static protected $description = 'Export result to Triple-S XML Version 2.0, with fixed column for data.';
+    
     protected $settings = array(
-        'documentation'=>array(
+
+        'listDocumentation'=>array(
             'type'=>'info',
-            'content'=>"<div class='alert alert-info'><dl> <dt>Pour les valeurs numériques</dt><dd>Vous pouvez utiliser les valeurs minium et valeurs maximum pour fixer les valeurs minimums et maximum.</dd><dd> Pour fixer le nombre de chiffres après la virgule, utiliser le . (point). Par exemple '0.' en minimum donneras un entier.Attention : 0.0 en minimum et 10.99 en max donneras 1 décimal au maximum</dd><dt>Pour les valeurs textes</dt><dd>Les valeurs indiquées donnent la taille minium, la taille finale sera le minimum entre celle ci et la taille réelle en base de données.</dd></dl></div>",
+            'content'=>"<div class='alert alert-info'>For list of choice : you can set a specific string for No answer (différent from not seeing).</div>",
+        ),
+        'listChoiceNoANswer'=>array(
+            'type'=>'string',
+            'label'=>'Remplacer les sans réponses par le code',
+            'default'=>"",
         ),
 
+        'stringDocumentation'=>array(
+            'type'=>'info',
+            'content'=>"<div class='alert alert-info'><dl><dt>Pour les valeurs textes</dt><dd>Les valeurs indiquées donnent la taille minium,</dd><dd> la taille finale sera le minimum entre celle ci et la taille réelle en base de données.</dd></dl></div>",
+        ),
         'stringMin'=>array(
             'type'=>'int',
             'label'=>"Taille minimum des exports de type texte par défaut",
@@ -78,7 +89,11 @@ class exportTripleS extends PluginBase {
             'label'=>"Taille minimum de l’export de l'url référente",
             'default'=>40,
         ),
-        'debugInfo'=>array(
+        'numericDocumentation'=>array(
+            'type'=>'info',
+            'content'=>"<div class='alert alert-info'><dl> <dt>Pour les valeurs numériques</dt><dd>Vous pouvez utiliser les valeurs minimum et valeurs maximum pour fixer les valeurs minimums et maximum.</dd><dd> Pour fixer le nombre de chiffres après la virgule, utiliser le . (point). Par exemple '0.' en minimum donneras un entier.Attention : 0.0 en minimum et 10.99 en max donneras 1 décimal au maximum</dd></div>",
+        ),
+        'debugDocumentation'=>array(
             'type'=>'info',
             'content'=>"<div class='alert alert-info'><strong>Information de debug</strong><dl> <dt>Basique</dt><dd>Ajoute dans l'export sss une colonne pour tous les types de question. Permet la compatibilité du fichier.</dd><dt>Avancé</dt><dd>Visualisation du fichier et pas export, casse le fichier triple-s (ajoute trop d’information)</dd><dt>Complete</dt><dd>Export les données visuellement sous forme de tableau.</dd></dt></dl></div>",
         ),
@@ -97,6 +112,14 @@ class exportTripleS extends PluginBase {
 
     public function __construct(PluginManager $manager, $id) {
         parent::__construct($manager, $id);
+        if((Yii::app()->getConfig("buildnumber") && intval(Yii::app()->getConfig("buildnumber"))<140703))
+        {
+            unset($this->settings['listDocumentation']);
+            unset($this->settings['stringDocumentation']);
+            unset($this->settings['numericDocumentation']);
+
+            unset($this->settings['debugDocumentation']);
+        }
         $this->subscribe('listExportPlugins');
         $this->subscribe('listExportOptions');
         $this->subscribe('newExport');

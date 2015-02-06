@@ -285,7 +285,7 @@
             'values'=>array(
                 'range'=>array(
                     '@attributes'=>array(
-                        'from'=>'0',
+                        'from'=>$this->pluginSettings['listChoiceNoANswer']!='' ? '0' : '1' ,
                         'to'=>'5',
                     ),
                 )
@@ -305,7 +305,7 @@
             'values'=>array(
                 'range'=>array(
                     '@attributes'=>array(
-                        'from'=>'0',
+                        'from'=>$this->pluginSettings['listChoiceNoANswer']!='' ? '0' : '1' ,
                         'to'=>'10',
                     ),
                 )
@@ -315,147 +315,95 @@
     /* getListYUN : 10 point radio : integer 1 to 5 */
     public function getListYUNSyntax($aField)
     {
-        return array(
-            'datasize'=>1,
-            '@attributes'=>array(
-                'type'=>'single',
-                'format'=>'literal',
+        $aValue=array(
+            array(
+                '@value'=>$this->translate("Yes"),
+                '@attributes'=>array(
+                    'code'=>'Y',
+                ),
             ),
-            'values'=>array(
-                'value'=>array(
-                    array(
-                        '@value'=>$this->translate("No answer"),
-                        '@attributes'=>array(
-                            'code'=>'0',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("Yes"),
-                        '@attributes'=>array(
-                            'code'=>'Y',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("No"),
-                        '@attributes'=>array(
-                            'code'=>'N',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("Uncertain"),
-                        '@attributes'=>array(
-                            'code'=>'U',
-                        ),
-                    ),
+            array(
+                '@value'=>$this->translate("No"),
+                '@attributes'=>array(
+                    'code'=>'N',
+                ),
+            ),
+            array(
+                '@value'=>$this->translate("Uncertain"),
+                '@attributes'=>array(
+                    'code'=>'U',
                 ),
             ),
         );
+        return $this->getList($aValue,1);
+
     }
     /* getListISD : 10 point radio : integer 1 to 5 */
     public function getListISDSyntax($aField)
     {
-        return array(
-            'datasize'=>1,
-            '@attributes'=>array(
-                'type'=>'single',
-                'format'=>'literal',
+        $aValue=array(
+            array(
+                '@value'=>$this->translate("Increase"),
+                '@attributes'=>array(
+                    'code'=>'I',
+                ),
             ),
-            'values'=>array(
-                'value'=>array(
-                    array(
-                        '@value'=>$this->translate("No answer"),
-                        '@attributes'=>array(
-                            'code'=>'0',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("Increase"),
-                        '@attributes'=>array(
-                            'code'=>'I',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("Decrease"),
-                        '@attributes'=>array(
-                            'code'=>'D',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("Same"),
-                        '@attributes'=>array(
-                            'code'=>'S',
-                        ),
-                    ),
+            array(
+                '@value'=>$this->translate("Decrease"),
+                '@attributes'=>array(
+                    'code'=>'D',
+                ),
+            ),
+            array(
+                '@value'=>$this->translate("Same"),
+                '@attributes'=>array(
+                    'code'=>'S',
                 ),
             ),
         );
+        return $this->getList($aValue,1);
+
     }
     /* getListYN : Y / N */
     public function getListYNSyntax($aField)
     {
-        return array(
-            'datasize'=>1,
-            '@attributes'=>array(
-                'type'=>'single',
-                'format'=>'literal',
+        $aValue=array(
+            array(
+                '@value'=>$this->translate("Yes"),
+                '@attributes'=>array(
+                    'code'=>'Y',
+                ),
             ),
-            'values'=>array(
-                'value'=>array(
-                    array(
-                        '@value'=>$this->translate("No answer"),
-                        '@attributes'=>array(
-                            'code'=>'0',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("Yes"),
-                        '@attributes'=>array(
-                            'code'=>'Y',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("No"),
-                        '@attributes'=>array(
-                            'code'=>'N',
-                        ),
-                    ),
+            array(
+                '@value'=>$this->translate("No"),
+                '@attributes'=>array(
+                    'code'=>'N',
                 ),
             ),
         );
+        return $this->getList($aValue,1);
     }
 
     /* getListGender */
     public function getListGenderSyntax($aField)
     {
-        return array(
-            'datasize'=>1,
-            '@attributes'=>array(
-                'type'=>'single',
-                'format'=>'literal',
+        $aValue=array(
+            array(
+                '@value'=>$this->translate("Male"),
+                '@attributes'=>array(
+                    'code'=>'M',
+                ),
             ),
-            'values'=>array(
-                'value'=>array(
-                    array(
-                        '@value'=>$this->translate("No answer"),
-                        '@attributes'=>array(
-                            'code'=>'0',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("Male"),
-                        '@attributes'=>array(
-                            'code'=>'M',
-                        ),
-                    ),
-                    array(
-                        '@value'=>$this->translate("Female"),
-                        '@attributes'=>array(
-                            'code'=>'F',
-                        ),
-                    ),
+            array(
+                '@value'=>$this->translate("Female"),
+                '@attributes'=>array(
+                    'code'=>'F',
                 ),
             ),
         );
+
+        return $this->getList($aValue,1);
+
     }
 
     /* getListAnswers : The code OR a string for comment or other */
@@ -474,21 +422,14 @@
             $scale=0;
 
         $aoAnswers = Answer::model()->findAll('qid=:qid AND language=:language and scale_id=:scale', array(':qid'=>$aField['qid'],':language'=>$this->sLanguageCode,':scale'=>$scale));
-        $aValue=array(
-                    array(
-                        '@value'=>$this->translate("No answer"),
-                        '@attributes'=>array(
-                            'code'=>'0',
-                        ),
-                    ),
-                );
+
         foreach($aoAnswers as $oAnswer)
         {
             $aValue[]=array(
                 '@attributes'=>array(
                     'code'=>$oAnswer->code,
                 ),
-                '@value'=>self::filterStringForTripleS($oAnswer->answer),
+                '@value'=>self::filterTextForXML($oAnswer->answer),
             );
         }
         $oQuestion=Question::model()->find('qid=:qid AND language=:language', array(':qid'=>$aField['qid'],':language'=>$this->sLanguageCode));
@@ -503,19 +444,32 @@
                 '@attributes'=>array(
                     'code'=>"-oth-", // Validate if OK
                 ),
-                '@value'=>self::filterStringForTripleS($sOtherText),
+                '@value'=>self::filterTextForXML($sOtherText),
             );
         }
+        return $this->getList($aValue,5);
+    }
+
+    public function getList($aValues,$iSize=5)
+    {
+        if($this->pluginSettings['listChoiceNoANswer']!='')
+        {
+            $aValues[]=array(
+                        '@value'=>$this->translate("No answer"),
+                        '@attributes'=>array(
+                            'code'=>substr($this->pluginSettings['listChoiceNoANswer'],0,$iSize),
+                        ),
+                    );
+        }
         return array(
-            'datasize'=>5,
+            'datasize'=>$iSize,
             '@attributes'=>array(
                 'type'=>'single',
                 'format'=>'literal',
             ),
-            'values'=>array("value"=>$aValue),
+            'values'=>array("value"=>$aValues),
         );
     }
-
     /* getDateTime : Date + time  in YmdHi format */
     public function getDateTimeSyntax($aField,$sName)
     {
@@ -766,10 +720,11 @@
      * @param string $string to filter
      * @return string filtered string
      */
-    public static function filterStringForTripleS($string)
+    public static function filterTextForXML($string)
     {
-        return preg_replace("/[\n\r]/"," ",strip_tags(trim($string)));
-    }
+        if (version_compare(substr(PCRE_VERSION,0,strpos(PCRE_VERSION,' ')),'7.0')>-1)
+           return preg_replace(array('~\R~u'),array(' '), strip_tags(trim($string)));
+        return preg_replace("/[\n\r]/"," ",strip_tags(trim($string)));    }
 
 }
 

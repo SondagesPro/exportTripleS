@@ -100,18 +100,20 @@ class exportTripleSDataWriter extends Writer {
     {
         if(isset($this->customFieldmap[$sColumn]))
         {
+            if($this->pluginSettings['debugMode']>=4){
+                return array('column'=>$sColumn,'value'=>$sValue,'triples'=>$aTripleS);
+            }
+            $return="";// Some column need 2 function
             foreach($this->customFieldmap[$sColumn] as $aTripleS)
             {
-                if($this->pluginSettings['debugMode']>=4){
-                    return array('column'=>$sColumn,'value'=>$sValue,'triples'=>$aTripleS);
-                }
+                
                 if(isset($aTripleS['@attributes']['type']))
                 {
                     $function = "getValue".$aTripleS['@attributes']['type'];
-
-                    return $this->$function($sValue,$aTripleS);
+                    $return.=$this->$function($sValue,$aTripleS);
                 }
             }
+            return $return;
         }
         elseif($this->pluginSettings['debugMode']>=4)
         {
@@ -134,6 +136,7 @@ class exportTripleSDataWriter extends Writer {
         $iSize=$aTriplesField['size'];
         if(is_null($sValue))
             return str_repeat (" ",$iSize); 
+        $sValue=self::filterStringForTripleS($sValue);
         return str_pad(substr($sValue,0,$iSize),$iSize," ");
 
     }
@@ -144,6 +147,10 @@ class exportTripleSDataWriter extends Writer {
         $iSize=max(strlen($sMin),strlen($sMax));
         if(is_null($sValue))
             return str_repeat (" ",$iSize);
+        if($sValue=="" || $sValue==" ")
+        {
+            return str_repeat (" ",$iSize);
+        }
         $aSize=explode(".",$sMax);
         if(isset($aSize[1]))
             $iDecimalLength=strlen($aSize[1]);
@@ -171,7 +178,7 @@ class exportTripleSDataWriter extends Writer {
             return str_repeat (" ",$iSize);
         // Fix value not in array ?
         if($sValue=="")
-            $sValue="0";
+            $sValue=$this->pluginSettings['listChoiceNoANswer'];
         return str_pad($sValue,$iSize," ");
     }
     private function getValueDate($sValue,$aTriplesField)
@@ -193,5 +200,18 @@ class exportTripleSDataWriter extends Writer {
         if(is_null($sValue))
             return " ";
         return (int)(bool)$sValue;
+    }
+
+    /*
+     * Filter string : no line feed
+     * 
+     * @param string $string to filter
+     * @return string filtered string
+     */
+    private static function filterStringForTripleS($string)
+    {
+        if (version_compare(substr(PCRE_VERSION,0,strpos(PCRE_VERSION,' ')),'7.0')>-1)
+           return preg_replace(array('~\R~u'),array(' '), $string);
+        return preg_replace("/[\n\r]/"," ",$string);
     }
 }

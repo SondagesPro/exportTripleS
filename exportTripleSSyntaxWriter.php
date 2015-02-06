@@ -59,7 +59,7 @@ class exportTripleSSyntaxWriter extends Writer {
         parent::init($oSurvey, $sLanguageCode, $oOptions);
         $this->iSurveyId=$oSurvey->id;
         $this->sLanguageCode=$sLanguageCode;
-        $this->sSurveyTitle=self::filterString($oSurvey->info['surveyls_title']);
+        $this->sSurveyTitle=self::filterText($oSurvey->info['surveyls_title']);
 
         $now=date("Ymd-His");
         $oOptions->headingFormat = "full";      // force to use own code
@@ -134,24 +134,12 @@ class exportTripleSSyntaxWriter extends Writer {
         fclose($this->handle);
     }
 
-    
-    /*
-    * Get if field need 1 column only : one for code and one for text. If text and code are same, return true
-    * @param string $sFieldType : the field type
-    * @param string $sFieldName : the field name
-    * @return string : false/code/text
-    */
-    public function sameTextAndCode($sFieldType,$sFieldName)
-    {
 
-    }
-    private static function filterString($string)
+    private static function filterText($string)
     {
+        if (version_compare(substr(PCRE_VERSION,0,strpos(PCRE_VERSION,' ')),'7.0')>-1)
+           return preg_replace(array('~\R~u'),array(' '), strip_tags(trim($string)));
         return preg_replace("/[\n\r]/"," ",strip_tags(trim($string)));
     }
 
-    private function getTripleSQuestionArray($sType,$aField)
-    {
-        
-    }
 }
