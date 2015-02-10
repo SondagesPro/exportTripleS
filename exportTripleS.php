@@ -20,7 +20,7 @@
  */
 class exportTripleS extends PluginBase {
     protected $storage = 'DbStorage';
-    static protected $name = 'Export Triple S';
+    static protected $name = 'Export Triple S 1.1';
     static protected $description = 'Export result to Triple-S XML Version 2.0, with fixed column for data.';
     
     protected $settings = array(
@@ -38,6 +38,15 @@ class exportTripleS extends PluginBase {
         'stringDocumentation'=>array(
             'type'=>'info',
             'content'=>"<div class='alert alert-info'><dl><dt>Pour les valeurs textes</dt><dd>Les valeurs indiquées donnent la taille minium,</dd><dd> la taille finale sera le minimum entre celle ci et la taille réelle en base de données.</dd></dl></div>",
+        ),
+        'stringAnsi'=>array(
+            'type'=>'select',
+            'label'=>"Export user text in ANSI (else UTF-8)",
+            'options'=>array(
+                'utf8'=>'Export in utf-8',
+                'ansi'=>'Force ANSI',
+            ),
+            'default'=>'utf8',
         ),
         'stringMin'=>array(
             'type'=>'int',
@@ -89,10 +98,27 @@ class exportTripleS extends PluginBase {
             'label'=>"Taille minimum de l’export de l'url référente",
             'default'=>40,
         ),
+
         'numericDocumentation'=>array(
             'type'=>'info',
             'content'=>"<div class='alert alert-info'><dl> <dt>Pour les valeurs numériques</dt><dd>Vous pouvez utiliser les valeurs minimum et valeurs maximum pour fixer les valeurs minimums et maximum.</dd><dd> Pour fixer le nombre de chiffres après la virgule, utiliser le . (point). Par exemple '0.' en minimum donneras un entier.Attention : 0.0 en minimum et 10.99 en max donneras 1 décimal au maximum</dd></div>",
         ),
+
+        //~ 'datetimeDocumentation'=>array(
+            //~ 'type'=>'info',
+            //~ 'content'=>"<div class='alert alert-info'><dl> <dt>Pour les valeurs Date + time</dt><dd>Type d'export pour les date time, le défaut est d'utiliser les formats date et time, vous pouvez choisir de les exporter en character.</dd></dl></div>",
+        //~ ),
+        //~ 'datetimeExport'=>array(
+            //~ 'type'=>'select',
+            //~ 'label'=>"Export DATETIME en ",
+            //~ 'options'=>array(
+                //~ 'date'=>'date + time',
+                //~ 'character'=>'character in 2 columns (8+4)',
+            //~ ),
+            //~ 'default'=>'date',
+        //~ ),
+
+        
         'debugDocumentation'=>array(
             'type'=>'info',
             'content'=>"<div class='alert alert-info'><strong>Information de debug</strong><dl> <dt>Basique</dt><dd>Ajoute dans l'export sss une colonne pour tous les types de question. Permet la compatibilité du fichier.</dd><dt>Avancé</dt><dd>Visualisation du fichier et pas export, casse le fichier triple-s (ajoute trop d’information)</dd><dt>Complete</dt><dd>Export les données visuellement sous forme de tableau.</dd></dt></dl></div>",

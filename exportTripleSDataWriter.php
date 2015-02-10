@@ -22,7 +22,7 @@
 Yii::import('application.helpers.admin.export.*');
 class exportTripleSDataWriter extends Writer {
     const APPNAME = 'exportTripleS';
-    const VERSION = '0.2';
+    const VERSION = '1.0';
     private $output;
     private $separator;
     private $hasOutputHeader;
@@ -41,6 +41,7 @@ class exportTripleSDataWriter extends Writer {
 
     function __construct($settings)
     {
+        mb_internal_encoding('utf-8'); // @important
         $this->output = '';
         $this->separator = '';
         $this->hasOutputHeader = false;
@@ -63,12 +64,24 @@ class exportTripleSDataWriter extends Writer {
         $tripleSfunction= new tripleSHelper($this->pluginSettings);
         $tripleSfunction->iSurveyId=$this->iSurveyId;
         $tripleSfunction->sLanguageCode=$this->sLanguageCode;
+
         $this->customFieldmap = $tripleSfunction->createTripleSFieldmap($oSurvey, $sLanguageCode, $oOptions);
+        $aSelectedColumns=array();
+        foreach($oOptions->selectedColumns as $sSelectedColumns)
+        {
+            if(mb_substr($sSelectedColumns, -4, 4) != 'time')// time don't go to transformResponseValue ...
+                $aSelectedColumns[]=$sSelectedColumns;
+        }
+        $oOptions->selectedColumns=$aSelectedColumns;
+        if($this->pluginSettings['stringAnsi']=="ansi")
+            setlocale(LC_ALL, $this->getLocaleLanguage($this->sLanguageCode));
+
         if ($oOptions->output == 'display')
         {
+            header('Content-Encoding: UTF-8');
             if(!$this->pluginSettings['debugMode'])
                 header("Content-Disposition: attachment; filename=survey_{$oSurvey->id}_{$now}_triples.dat");
-            if(intval($this->pluginSettings['debugMode'])<2)
+            //if(intval($this->pluginSettings['debugMode'])<2)
                 header("Content-type: text/plain; charset=UTF-8");
             header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
             header("Pragma: public");
@@ -98,12 +111,17 @@ class exportTripleSDataWriter extends Writer {
     }
     protected function transformResponseValue($sValue, $fieldType, FormattingOptions $oOptions, $sColumn = null)
     {
-        if(isset($this->customFieldmap[$sColumn]))
+        if($sColumn && isset($this->customFieldmap[$sColumn]))
         {
             if($this->pluginSettings['debugMode']>=4){
-                return array('column'=>$sColumn,'value'=>$sValue,'triples'=>$aTripleS);
+                return array('column'=>$sColumn,'value'=>$sValue,'triples'=>$this->customFieldmap[$sColumn]);
             }
             $return="";// Some column need 2 function
+            if(!$this->hasOutputHeader)
+            {
+                $return= "\xEF\xBB\xBF"; // UTF-8 BOM
+                $this->hasOutputHeader=true;
+            }
             foreach($this->customFieldmap[$sColumn] as $aTripleS)
             {
                 
@@ -115,16 +133,10 @@ class exportTripleSDataWriter extends Writer {
             }
             return $return;
         }
-        elseif($this->pluginSettings['debugMode']>=4)
+        else
         {
-            return array('column'=>$sColumn,'value'=>$sValue,'lstype'=>$fieldType,'triples'=>'invalid');
+            return "";
         }
-
-        //~ elseif($this->pluginSettings['debugMode']>2)
-        //~ {
-            //~ $fieldType = strlen($fieldType)==1 ? $fieldType : "-";
-            //~ return $fieldType;
-        //~ }
     }
     public function close()
     {
@@ -134,10 +146,16 @@ class exportTripleSDataWriter extends Writer {
     private function getValueCharacter($sValue,$aTriplesField)
     {
         $iSize=$aTriplesField['size'];
+        //$sValue=$sValue;
+        if($this->pluginSettings['stringAnsi']=="ansi")
+        {
+            $sValue = iconv('UTF-8','ASCII//TRANSLIT',$sValue); 
+        }
         if(is_null($sValue))
             return str_repeat (" ",$iSize); 
         $sValue=self::filterStringForTripleS($sValue);
-        return str_pad(substr($sValue,0,$iSize),$iSize," ");
+        
+        return self::mb_str_pad(mb_substr($sValue,0,$iSize),$iSize," ",STR_PAD_RIGHT);
 
     }
     private function getValueQuantity($sValue,$aTriplesField)
@@ -173,7 +191,7 @@ class exportTripleSDataWriter extends Writer {
     {
         $iStart=intval($aTriplesField['position']['@attributes']['start']);
         $iFinish=intval($aTriplesField['position']['@attributes']['finish']);
-        $iSize=$iFinish-$iStart;
+        $iSize=$iFinish-$iStart+1;
         if(is_null($sValue))
             return str_repeat (" ",$iSize);
         // Fix value not in array ?
@@ -213,5 +231,31 @@ class exportTripleSDataWriter extends Writer {
         if (version_compare(substr(PCRE_VERSION,0,strpos(PCRE_VERSION,' ')),'7.0')>-1)
            return preg_replace(array('~\R~u'),array(' '), $string);
         return preg_replace("/[\n\r]/"," ",$string);
+    }
+
+    private static function mb_str_pad($str, $pad_len, $pad_str = ' ', $dir = STR_PAD_RIGHT, $encoding = NULL)
+    {
+        $encoding = $encoding === NULL ? mb_internal_encoding() : $encoding;
+        $padBefore = $dir === STR_PAD_BOTH || $dir === STR_PAD_LEFT;
+        $padAfter = $dir === STR_PAD_BOTH || $dir === STR_PAD_RIGHT;
+        $pad_len -= mb_strlen($str, $encoding);
+        $targetLen = $padBefore && $padAfter ? $pad_len / 2 : $pad_len;
+        $strToRepeatLen = mb_strlen($pad_str, $encoding);
+        $repeatTimes = ceil($targetLen / $strToRepeatLen);
+        $repeatedString = str_repeat($pad_str, max(0, $repeatTimes)); // safe if used with valid unicode sequences (any charset)
+        $before = $padBefore ? mb_substr($repeatedString, 0, floor($targetLen), $encoding) : '';
+        $after = $padAfter ? mb_substr($repeatedString, 0, ceil($targetLen), $encoding) : '';
+        return $before . $str . $after;
+    }
+    private function getLocaleLanguage($sLanguageCode)
+    {
+        $aLanguageLocale=array(
+            'fr'=>'fr_FR',
+            'de'=>'de_DE',
+            'de-informal'=>'de_DE',
+        );
+        if(isset($aLanguageLocale[$sLanguageCode]))
+            return $aLanguageLocale[$sLanguageCode];
+        return 'en_US';
     }
 }

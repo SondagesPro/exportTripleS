@@ -35,6 +35,7 @@
         'datestamp'=>'getDateTime',
         'lastpage'=>'getLastPage',
         'startlanguage'=>'getLanguage',
+        'token'=>'getToken',
         'url'=>'getString',
         'X'=>'getNone', //'boilerplate'
         '5'=>'getList5', //'choice-5-pt-radio'
@@ -89,15 +90,10 @@
                 $aTripleSField[$aField['fieldname']]=$aTripleSarray;
         }
         $aFieldmap['tokenFields'] = array_intersect_key($oSurvey->tokenFields, array_flip($oOptions->selectedColumns));
-#        foreach($aFieldmap['tokenFields'] as $aField)
-#        {
-#            $sName='token_';
-#            $aTripleSField[$sName]=array(
-#                'type'=>'t_'.,
-#                'qid'=>$aField['qid'],
-#                'text'=>$aField['question'],
-#            );
-#        }
+        foreach($aFieldmap['tokenFields'] as $sFieldName =>$aField)
+        {
+                $aTripleSField[$sFieldName]=$this->stringTokenSize($sFieldName);
+        }
         return $aTripleSField;
     }
     
@@ -229,6 +225,7 @@
                     'type'=>'character',
                 ),
                 'name' => "Todo.{$aField['type']}.{$aField['fieldname']}",
+                'size' => "1",
             );
         }
     }
@@ -512,6 +509,17 @@
         );
     }
 
+    public function getTokenSyntax($aField)
+    {
+        return array(
+            'datasize'=>36,
+            '@attributes'=>array(
+                'type'=>'character',
+            ),
+            'size'=>36,
+        );
+    }
+
     /* getArrayNumbers : 3 solution : float/fxed list / boolean */
     public function getArrayNumbersSyntax($aField)
     {
@@ -624,7 +632,10 @@
             'size'=>$dataSize,
         );
     }
-
+    public function getTokenTableSyntax()
+    {
+        $dataSize=$this->stringSize($aField['fieldname'],$aField['type']);
+    }
     /* Find the string size according to type and real DB size */
     public function stringSize($sColumn,$sType)
     {
@@ -653,6 +664,54 @@
         return max((int)$minSize,(int)$lengthReal);
     }
 
+    public function stringTokenSize($sColumn)
+    {
+        static $oSchema;
+        if(!$oSchema);
+            $oSchema= Token::model($this->iSurveyId)->getMetaData()->columns;
+        if(isset($oSchema[$sColumn]))
+        {
+            switch ($oSchema[$sColumn]->type)
+            {
+                case 'string':
+                    return array(
+                        'datasize'=>$oSchema[$sColumn]->size,
+                        '@attributes'=>array(
+                            'type'=>'character',
+                        ),
+                        'size'=>$oSchema[$sColumn]->size,
+                    );
+                    break;
+                case 'datetime':
+                    return array(
+                        'datasize'=>20,
+                        '@attributes'=>array(
+                            'type'=>'character',
+                        ),
+                        'size'=>20,
+                    );
+                case 'text':
+                default:
+                    $baseSize=$this->pluginSettings['stringMin'];
+                    $lengthReal = Yii::app()->db->createCommand()
+                    ->select('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')')
+                    ->from("{{token".$this->iSurveyId."}}")
+                    ->order('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
+                    ->limit(1)
+                    ->queryScalar();
+                    $iSize= max((int)$minSize,(int)$lengthReal);
+                    return array(
+                        'datasize'=>$iSize,
+                        '@attributes'=>array(
+                            'type'=>'character',
+                        ),
+                        'size'=>$iSize,
+                    );
+                    break;
+            }
+        }
+
+    }
     /* Find the numeric format according to attribute */
      public function decimalInfo($aField)
     {

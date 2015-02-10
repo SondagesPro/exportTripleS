@@ -22,7 +22,7 @@
 Yii::import('application.helpers.admin.export.*');
 class exportTripleSSyntaxWriter extends Writer {
     const APPNAME = 'exportTripleS';
-    const VERSION = '0.1';
+    const VERSION = '1.0';
     private $output;
     private $separator;
     private $hasOutputHeader;
