@@ -67,6 +67,9 @@
         ";"=>'getString', //'array-multi-flexi-text';
         "1"=>'getListAnswers', //'array-flexible-duel-scale'; //    Array dual scale
         "*"=>'getString', //'equation';    // Equation
+        "interview_time"=>'getTimeTable',
+        "page_time"=>'getTimeTable',
+        "answer_time"=>'getTimeTable',
     );
 
 
@@ -84,6 +87,7 @@
         $aExistingKey=array();
         $aTripleSField=array();
         $aFieldmap['questions'] = array_intersect_key($oSurvey->fieldMap, array_flip($oOptions->selectedColumns));
+
         foreach($aFieldmap['questions'] as $aField)
         {
             if($aTripleSarray=$this->getTripleSarray($oSurvey,$aField))
@@ -92,7 +96,8 @@
         $aFieldmap['tokenFields'] = array_intersect_key($oSurvey->tokenFields, array_flip($oOptions->selectedColumns));
         foreach($aFieldmap['tokenFields'] as $sFieldName =>$aField)
         {
-                $aTripleSField[$sFieldName]=$this->stringTokenSize($sFieldName);
+            
+            $aTripleSField[$sFieldName]=$this->getTokenTableSyntax(array_merge(array('fieldname'=>$sFieldName),$aField));
         }
         return $aTripleSField;
     }
@@ -632,9 +637,44 @@
             'size'=>$dataSize,
         );
     }
-    public function getTokenTableSyntax()
+
+    public function getTimeTableSyntax($aField)
     {
-        $dataSize=$this->stringSize($aField['fieldname'],$aField['type']);
+        return array(
+            'datasize'=>12,
+            '@attributes'=>array(
+                'type'=>'quantity',
+            ),
+            'values'=>array(
+                'range'=>array(
+                    '@attributes'=>array(
+                        'from'=>"0.00",
+                        'to'=>"999999999.99",
+                    ),
+                )
+            ),
+        );
+    }
+
+    public function getTokenTableSyntax($aField)
+    {
+        $iSize=$this->stringTokenSize($aField['fieldname']);
+        $aTripleSArray=array(
+            '@attributes' => array(
+                'ident'=>$this->ident++,
+                'type'=>'character',
+            ),
+            'name' => $aField['fieldname'],
+            'label' => isset($aField['description']) ?  $aField['description'] : $aField['fieldname'],
+            'position'=>array(
+                '@attributes'=>array(
+                    'start'=>++$this->position,
+                    'finish'=>$this->position+=($iSize-1),
+                ),
+            ),
+            'size'=>$iSize,
+        );
+        return array($aTripleSArray);
     }
     /* Find the string size according to type and real DB size */
     public function stringSize($sColumn,$sType)
@@ -674,39 +714,55 @@
             switch ($oSchema[$sColumn]->type)
             {
                 case 'string':
-                    return array(
-                        'datasize'=>$oSchema[$sColumn]->size,
-                        '@attributes'=>array(
-                            'type'=>'character',
-                        ),
-                        'size'=>$oSchema[$sColumn]->size,
-                    );
+                    if($oSchema[$sColumn]->size)
+                        return $oSchema[$sColumn]->size;
+                    else
+                    {
+                        $baseSize=$this->pluginSettings['stringMin'];
+                        $lengthReal = Yii::app()->db->createCommand()
+                        ->select('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')')
+                        ->from("{{tokens_".$this->iSurveyId."}}")
+                        ->order('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
+                        ->limit(1)
+                        ->queryScalar();
+                        $iSize= max((int)$baseSize,(int)$lengthReal);
+                        return $iSize;
+                    }
+                    //~ return array(
+                        //~ 'datasize'=>$oSchema[$sColumn]->size,
+                        //~ '@attributes'=>array(
+                            //~ 'type'=>'character',
+                        //~ ),
+                        //~ 'size'=>$oSchema[$sColumn]->size,
+                    //~ );
                     break;
                 case 'datetime':
-                    return array(
-                        'datasize'=>20,
-                        '@attributes'=>array(
-                            'type'=>'character',
-                        ),
-                        'size'=>20,
-                    );
+                    return 20;
+                    //~ return array(
+                        //~ 'datasize'=>20,
+                        //~ '@attributes'=>array(
+                            //~ 'type'=>'character',
+                        //~ ),
+                        //~ 'size'=>20,
+                    //~ );
                 case 'text':
                 default:
                     $baseSize=$this->pluginSettings['stringMin'];
                     $lengthReal = Yii::app()->db->createCommand()
                     ->select('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')')
-                    ->from("{{token".$this->iSurveyId."}}")
+                    ->from("{{tokens_".$this->iSurveyId."}}")
                     ->order('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
                     ->limit(1)
                     ->queryScalar();
-                    $iSize= max((int)$minSize,(int)$lengthReal);
-                    return array(
-                        'datasize'=>$iSize,
-                        '@attributes'=>array(
-                            'type'=>'character',
-                        ),
-                        'size'=>$iSize,
-                    );
+                    $iSize= max((int)$baseSize,(int)$lengthReal);
+                    return $iSize;
+                    //~ return array(
+                        //~ 'datasize'=>$iSize,
+                        //~ '@attributes'=>array(
+                            //~ 'type'=>'character',
+                        //~ ),
+                        //~ 'size'=>$iSize,
+                    //~ );
                     break;
             }
         }

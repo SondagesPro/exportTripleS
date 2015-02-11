@@ -66,13 +66,13 @@ class exportTripleSDataWriter extends Writer {
         $tripleSfunction->sLanguageCode=$this->sLanguageCode;
 
         $this->customFieldmap = $tripleSfunction->createTripleSFieldmap($oSurvey, $sLanguageCode, $oOptions);
-        $aSelectedColumns=array();
-        foreach($oOptions->selectedColumns as $sSelectedColumns)
-        {
-            if(mb_substr($sSelectedColumns, -4, 4) != 'time')// time don't go to transformResponseValue ...
-                $aSelectedColumns[]=$sSelectedColumns;
-        }
-        $oOptions->selectedColumns=$aSelectedColumns;
+        //~ $aSelectedColumns=array();
+        //~ foreach($oOptions->selectedColumns as $sSelectedColumns)
+        //~ {
+            //~ if(mb_substr($sSelectedColumns, -4, 4) != 'time')// time don't go to transformResponseValue ...
+                //~ $aSelectedColumns[]=$sSelectedColumns;
+        //~ }
+        //~ $oOptions->selectedColumns=$aSelectedColumns;
         if($this->pluginSettings['stringAnsi']=="ansi")
             setlocale(LC_ALL, $this->getLocaleLanguage($this->sLanguageCode));
 
@@ -104,27 +104,44 @@ class exportTripleSDataWriter extends Writer {
     {
         if($this->pluginSettings['debugMode']>=4)
         {
+            echo "<pre>".var_export($oOptions->selectedColumns,1)."</pre>";
+            echo "<pre>".var_export($this->customFieldmap,1)."</pre>";
             echo "<pre>".var_export($values,1)."</pre>";
+
+            die();
         }
         else
-            echo implode($values)."\n";
-    }
-    protected function transformResponseValue($sValue, $fieldType, FormattingOptions $oOptions, $sColumn = null)
-    {
-        if($sColumn && isset($this->customFieldmap[$sColumn]))
         {
-            if($this->pluginSettings['debugMode']>=4){
-                return array('column'=>$sColumn,'value'=>$sValue,'triples'=>$this->customFieldmap[$sColumn]);
-            }
-            $return="";// Some column need 2 function
             if(!$this->hasOutputHeader)
             {
                 $return= "\xEF\xBB\xBF"; // UTF-8 BOM
                 $this->hasOutputHeader=true;
             }
+            $aValues=array();
+            $aColumns=$oOptions->selectedColumns;
+            foreach($values as $key=>$value)
+            {
+                $sColumn=$aColumns[$key];
+                $aValues[]=$key.$sColumn."|";
+
+                $aValues[]=$this->tripleSgetValue($value,$sColumn);
+            }
+            //~ die();
+
+            echo implode($aValues)."\n";
+        }
+    }
+    private function tripleSgetValue($sValue,$sColumn)
+    {
+        if(isset($this->customFieldmap[$sColumn]))
+        {
+            if($this->pluginSettings['debugMode']>=4){
+                return array('column'=>$sColumn,'value'=>$sValue,'triples'=>$this->customFieldmap[$sColumn]);
+            }
+            $return="";// Some column need 2 function
+
             foreach($this->customFieldmap[$sColumn] as $aTripleS)
             {
-                
                 if(isset($aTripleS['@attributes']['type']))
                 {
                     $function = "getValue".$aTripleS['@attributes']['type'];
@@ -138,6 +155,35 @@ class exportTripleSDataWriter extends Writer {
             return "";
         }
     }
+    //~ protected function transformResponseValue($sValue, $fieldType, FormattingOptions $oOptions, $sColumn = null)
+    //~ {
+        //~ if($sColumn && isset($this->customFieldmap[$sColumn]))
+        //~ {
+            //~ if($this->pluginSettings['debugMode']>=4){
+                //~ return array('column'=>$sColumn,'value'=>$sValue,'triples'=>$this->customFieldmap[$sColumn]);
+            //~ }
+            //~ $return="";// Some column need 2 function
+            //~ if(!$this->hasOutputHeader)
+            //~ {
+                //~ $return= "\xEF\xBB\xBF"; // UTF-8 BOM
+                //~ $this->hasOutputHeader=true;
+            //~ }
+            //~ foreach($this->customFieldmap[$sColumn] as $aTripleS)
+            //~ {
+                //~ 
+                //~ if(isset($aTripleS['@attributes']['type']))
+                //~ {
+                    //~ $function = "getValue".$aTripleS['@attributes']['type'];
+                    //~ $return.=$this->$function($sValue,$aTripleS);
+                //~ }
+            //~ }
+            //~ return $return;
+        //~ }
+        //~ else
+        //~ {
+            //~ return "";
+        //~ }
+    //~ }
     public function close()
     {
         fclose($this->handle);
@@ -175,7 +221,14 @@ class exportTripleSDataWriter extends Writer {
         else
             $iDecimalLength=0;
         $aValue=explode(".",$sValue);
-        $sNewValue=$aValue[0];
+        $aMax=explode(".",$sMax);
+        $aMin=explode(".",$sMin);
+        if($aValue[0]<$aMin[0])
+            $sNewValue=$aMin[0];
+        elseif($aValue[0]>$aMax[0])
+            $sNewValue=$aMax[0];
+        else
+            $sNewValue=$aValue[0];
         if($iDecimalLength)
         {
             $sNewValue.=".";
@@ -185,6 +238,7 @@ class exportTripleSDataWriter extends Writer {
                 $sNewValue.=str_repeat("0",$iDecimalLength);
         }
         // Fix min Max ?
+
         return str_pad($sNewValue,$iSize," ",STR_PAD_LEFT);
     }
     private function getValueSingle($sValue,$aTriplesField)
