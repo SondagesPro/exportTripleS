@@ -3,9 +3,9 @@
  * exportTripleS Plugin for LimeSurvey
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2015 Denis Chenu <http://sondages.pro>
  * @license GPL v3
- * @version 0.9
+ * @version 2.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  */
  class tripleSHelper 
 {
-    /* The plugin settings ?*/
+    /* The plugin settings */
     public $pluginSettings;
     public $iSurveyId = 0;
     public $sLanguageCode;
@@ -85,21 +85,29 @@
     public function createTripleSFieldmap($oSurvey, $sLanguage, $oOptions)
     {
         $aExistingKey=array();
-        $aTripleSField=array();
+        $aTripleSFields=array();
         $aFieldmap['questions'] = array_intersect_key($oSurvey->fieldMap, array_flip($oOptions->selectedColumns));
 
         foreach($aFieldmap['questions'] as $aField)
         {
             if($aTripleSarray=$this->getTripleSarray($oSurvey,$aField))
-                $aTripleSField[$aField['fieldname']]=$aTripleSarray;
+                $aTripleSFields[$aField['fieldname']]=$aTripleSarray;
         }
         $aFieldmap['tokenFields'] = array_intersect_key($oSurvey->tokenFields, array_flip($oOptions->selectedColumns));
         foreach($aFieldmap['tokenFields'] as $sFieldName =>$aField)
         {
-            
-            $aTripleSField[$sFieldName]=$this->getTokenTableSyntax(array_merge(array('fieldname'=>$sFieldName),$aField));
+            $aTripleSFields[$sFieldName]=$this->getTokenTableSyntax(array_merge(array('fieldname'=>$sFieldName),$aField));
         }
-        return $aTripleSField;
+
+        // QUICK event ...
+        foreach($aTripleSFields as $sFieldName => $aTripleSarray)
+        {
+            $event = new PluginEvent('tripleSfieldMap');
+            $event->set('aTripleSarray', $aTripleSarray);
+            App()->getPluginManager()->dispatchEvent($event);
+            $aTripleSFields[$sFieldName]=$event->get('aTripleSarray');
+        }
+        return $aTripleSFields;
     }
     
     /*
@@ -144,12 +152,12 @@
             ),
             'name' => $sName,
             'label' => viewHelper::getFieldText($oSurvey->fieldMap[$aField['fieldname']],array('flat'=>true)),
+            'info'=>array(
+                'column'=>$aField['fieldname'],
+                'type'=>$aField['type'],
+                'fieldInfo'=>$oSurvey->fieldMap[$aField['fieldname']],
+            ),
         );
-        if(intval($this->pluginSettings['debugMode'])>=2)
-        {
-            $aDefaultTripleSArray['lscolumn']=$aField['fieldname'];
-            $aDefaultTripleSArray['lstype']=$aField['type'];
-        }
         if(array_key_exists($aField['type'],$this->aTypeFunction))
         {
             $function = $this->aTypeFunction[$aField['type']]."Syntax";
@@ -262,10 +270,24 @@
     }
 
     /* getMultiple : boolean value except for comment and other */
-    public function getMultipleSyntax($aField)
+    public function getMultipleSyntax($aField,$sName)
     {
         if(mb_substr($aField['fieldname'], -5, 5) == 'other')
-            return $this->getStringSyntax(array_merge($aField,array('type'=>'other')));
+        {
+            $otherArray=$this->getStringSyntax(array_merge($aField,array('type'=>'other')));
+            if($this->pluginSettings['multipleOtherExport']=='1col')
+            {
+                return $otherArray;
+            }
+            $baseArray=array(
+                'datasize'=>1,
+                '@attributes'=>array(
+                    'type'=>'logical',
+                ),
+                );
+            $otherArray['name']=$sName.".text";
+            return array ($baseArray,$otherArray);
+        }
         if(mb_substr($aField['fieldname'], -7, 7) == 'comment')
             return $this->getStringSyntax(array_merge($aField,array('type'=>'comment')));
         return array(
@@ -280,14 +302,14 @@
     {
         $aValue=array();
         for ($iCount = 1; $iCount <= 5; $iCount++) {
-            $aValue=array(
+            $aValue[]=array(
                 '@value'=>$iCount,
                 '@attributes'=>array(
                     'code'=>$iCount,
                 ),
             );
         }
-        return $this->getList($aValue,1);
+        return $this->getList($aValue,1,true);
     }
 
     /* getRadio5 : 10 point radio : integer 1 to 5 */
@@ -295,7 +317,7 @@
     {
         $aValue=array();
         for ($iCount = 1; $iCount <= 10; $iCount++) {
-            $aValue=array(
+            $aValue[]=array(
                 '@value'=>$iCount,
                 '@attributes'=>array(
                     'code'=>$iCount,
@@ -373,7 +395,7 @@
                 ),
             ),
         );
-        return $this->getList($aValue,1);
+        return $this->getList($aValue,1,true);
     }
 
     /* getListGender */
@@ -394,7 +416,7 @@
             ),
         );
 
-        return $this->getList($aValue,1);
+        return $this->getList($aValue,1,true);
 
     }
 
@@ -442,7 +464,14 @@
         return $this->getList($aValue,5);
     }
 
-    public function getList($aValues,$iSize=5)
+    /* Return the list value
+     * @param array key is code, label as value
+     * @param size of the code
+     * @param force as order
+     * 
+     * @return array for XML writer
+     */
+    public function getList($aValues,$iSize=5,$bOrder=false)
     {
         if($this->pluginSettings['listChoiceNoANswer']!='' && $iSize>=strlen($this->pluginSettings['listChoiceNoANswer']))
         {
@@ -453,34 +482,129 @@
                         ),
                     );
         }
-        return array(
-            'datasize'=>$iSize,
-            '@attributes'=>array(
-                'type'=>'single',
-                'format'=>'literal',
-            ),
-            'values'=>array("value"=>$aValues),
-        );
+        if($this->pluginSettings['listChoiceLabel']=='yes')
+        {
+            foreach($aValues as $key=>$aValue)
+            {
+                
+                $aValues[$key]=array(
+                    '@attributes'=>$aValue['@attributes'],
+                    '@value'=>$aValue['@attributes']['code'].". ".$aValue['@value'],
+                );
+            }
+        }
+        $sListChoiceReplace=$this->pluginSettings['listChoiceReplace'];
+        if($sListChoiceReplace=='replace' && $bOrder)
+            $sListChoiceReplace='order';
+        switch($sListChoiceReplace)
+        {
+            case 'order':
+                $aOrderValues=array();
+                $iCount=0;
+                $aInfoReplace=array();
+                foreach($aValues as $key=>$aValue)
+                {
+                    $aInfoReplace[$aValue['@attributes']['code']]=++$iCount;
+                    $aValues[$key]['@attributes']['code']=$iCount;
+                }
+                return array(
+                    'datasize'=>strlen($iCount),
+                    '@attributes'=>array(
+                        'type'=>'single',
+                    ),
+                    'values'=>array("value"=>$aValues),
+                    'info'=>array(
+                        'replace'=>$aInfoReplace,
+                    ),
+                );
+            case 'replace':
+                $aReplaceValues=array();
+                $aInfoReplace=array();
+                foreach($aValues as $key=>$aValue)
+                {
+                    if($aValues[$key]['@attributes']['code']=="-oth-"){
+                        $aInfoReplace[$aValue['@attributes']['code']]=$this->pluginSettings['listChoiceOther'];
+                        $aValues[$key]['@attributes']['code']=$this->pluginSettings['listChoiceOther'];
+                    }else{
+                        $aInfoReplace[$aValue['@attributes']['code']]=preg_replace("/[^0-9]/", "", $aValue['@attributes']['code']);
+                        $aValues[$key]['@attributes']['code']=preg_replace("/[^0-9]/", "", $aValue['@attributes']['code']);
+                    }
+                }
+                return array(
+                    'datasize'=>$iSize,
+                    '@attributes'=>array(
+                        'type'=>'single',
+                    ),
+                    'values'=>array("value"=>$aValues),
+                    'info'=>array(
+                        'replace'=>$aInfoReplace,
+                    ),
+                );
+            case 'code':
+            default:
+            return array(
+                'datasize'=>$iSize,
+                '@attributes'=>array(
+                    'type'=>'single',
+                    'format'=>'literal',
+                ),
+                'values'=>array("value"=>$aValues),
+            );
+        }
     }
     /* getDateTime : Date + time  in YmdHi format */
     public function getDateTimeSyntax($aField,$sName)
     {
-        return array(
-            array(
-                'datasize'=>8,
-                '@attributes'=>array(
-                    'type'=>'date',
+        switch($this->pluginSettings['datetimeExport'])
+        {
+            case 'character':
+                return array(
+                    'datasize'=>strlen("YYYY-MM-DD HH:ii:ss"),
+                    '@attributes'=>array(
+                        'type'=>'character',
+                    ),
+                    'size'=>strlen("YYYY-MM-DD HH:ii:ss"),
+                    'info'=>array(
+                        'type'=>'D',
+                    ),
+                );
+            case 'number':
+                return array(
+                    'datasize'=>8+6,
+                    '@attributes'=>array(
+                        'type'=>'quantity',
+                    ),
+                    'values'=>array(
+                        'range'=>array(
+                            '@attributes'=>array(
+                                'from'=>str_repeat ( "0" , 8+6 ),
+                                'to'=>str_repeat ( "9" , 8+6 ),
+                            ),
+                        ),
+                    ),
+                    'info'=>array(
+                        'type'=>'D',
+                    ),
+                );
+            case 'date':
+            default:
+            return array(
+                array(
+                    'datasize'=>8,
+                    '@attributes'=>array(
+                        'type'=>'date',
+                    ),
+                    'name' => $sName."_date",
                 ),
-                'name' => $sName."_date",
-            ),
-            array(
-                'datasize'=>4,
-                '@attributes'=>array(
-                    'type'=>'time',
+                array(
+                    'datasize'=>4,
+                    '@attributes'=>array(
+                        'type'=>'time',
+                    ),
+                    'name' => $sName."_time",
                 ),
-                'name' => $sName."_time",
-            ),
-        );
+            );
+        }
     }
 
     /* getLastPage : integer max 999 */
@@ -544,7 +668,7 @@
         }
         $nMinValue=(is_numeric($aAttributes['multiflexible_min'])) ? $aAttributes['multiflexible_min'] : "1" ;
         $nStep=($aAttributes['multiflexible_step']) ? $aAttributes['multiflexible_step'] : "1" ;
-        $nMaxValue=strval(is_numeric($aAttributes['multiflexible_max']) ? $aAttributes['multiflexible_max'] : $nMinValue+10);
+        $nMaxValue=strval(is_numeric($aAttributes['multiflexible_max']) ? $aAttributes['multiflexible_max'] : (is_numeric($aAttributes['multiflexible_min']) ? $nMinValue+10 : 10));
         $iDecimals=max(strrpos($nMinValue,"."),strrpos($nStep,"."),strrpos($nMaxValue,"."));
         if($iDecimals)
         {
@@ -660,6 +784,7 @@
     {
         $iSize=$this->stringTokenSize($aField['fieldname']);
         $aTripleSArray=array(
+            'datasize'=>$iSize,
             '@attributes' => array(
                 'ident'=>$this->ident++,
                 'type'=>'character',
@@ -673,6 +798,11 @@
                 ),
             ),
             'size'=>$iSize,
+            'info'=>array(
+                'column'=>$aField['fieldname'],
+                'type'=>'tokentable',
+                'fieldInfo'=>$aField,
+            ),
         );
         return array($aTripleSArray);
     }
@@ -771,10 +901,13 @@
     /* Find the numeric format according to attribute */
      public function decimalInfo($aField)
     {
+        $iIntLength=$this->pluginSettings['numericIntLength'];
+        $iDecLength=$this->pluginSettings['numericDecLength'];
+
         $aInfo=array(
             "decimals"=>10,
-            "min"=>"-".str_repeat ("9",30).".".str_repeat ("9",10),
-            "max"=>str_repeat ("9",30).".".str_repeat ("9",10),
+            "min"=>"-".str_repeat ("9",20).".".str_repeat ("9",10),
+            "max"=>str_repeat ("9",20).".".str_repeat ("9",10),
         );
         $aByAttributes=array();
 
@@ -796,6 +929,8 @@
                     $aInfo['min']=$aAttributes['multiflexible_min'];
                 if(isset($aAttributes['multiflexible_max']) && is_numeric($aAttributes['multiflexible_max']))
                     $aInfo['max']=$aAttributes['multiflexible_max'];
+                if(isset($aAttributes['multiflexible_step']) && is_numeric($aAttributes['multiflexible_step']))
+                    $aInfo['decimals']=strpos($aAttributes['multiflexible_step'],".") ? strlen(substr($aAttributes['multiflexible_step'], strrpos($aAttributes['multiflexible_step'], ".") + 1) ) : 0;
             }
             else
             {

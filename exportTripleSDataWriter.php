@@ -4,9 +4,9 @@
  * Writer for the plugin
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2015 Denis Chenu <http://sondages.pro>
  * @license GPL v3
- * @version 0.9
+ * @version 2.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,8 @@
  */
 Yii::import('application.helpers.admin.export.*');
 class exportTripleSDataWriter extends Writer {
-    const APPNAME = 'exportTripleS';
-    const VERSION = '1.0';
+
     private $output;
-    private $separator;
     private $hasOutputHeader;
 
     private $aColunInfo=array();
@@ -43,7 +41,6 @@ class exportTripleSDataWriter extends Writer {
     {
         mb_internal_encoding('utf-8'); // @important
         $this->output = '';
-        $this->separator = '';
         $this->hasOutputHeader = false;
         $basedir=dirname(__FILE__); // this will give you the / directory
         Yii::setPathOfAlias('exportTripleS', $basedir);
@@ -66,13 +63,7 @@ class exportTripleSDataWriter extends Writer {
         $tripleSfunction->sLanguageCode=$this->sLanguageCode;
 
         $this->customFieldmap = $tripleSfunction->createTripleSFieldmap($oSurvey, $sLanguageCode, $oOptions);
-        //~ $aSelectedColumns=array();
-        //~ foreach($oOptions->selectedColumns as $sSelectedColumns)
-        //~ {
-            //~ if(mb_substr($sSelectedColumns, -4, 4) != 'time')// time don't go to transformResponseValue ...
-                //~ $aSelectedColumns[]=$sSelectedColumns;
-        //~ }
-        //~ $oOptions->selectedColumns=$aSelectedColumns;
+
         if($this->pluginSettings['stringAnsi']=="ansi")
             setlocale(LC_ALL, $this->getLocaleLanguage($this->sLanguageCode));
 
@@ -102,16 +93,6 @@ class exportTripleSDataWriter extends Writer {
 
     protected function outputRecord($headers, $values, FormattingOptions $oOptions)
     {
-        if($this->pluginSettings['debugMode']>=4)
-        {
-            echo "<pre>".var_export($oOptions->selectedColumns,1)."</pre>";
-            echo "<pre>".var_export($this->customFieldmap,1)."</pre>";
-            echo "<pre>".var_export($values,1)."</pre>";
-
-            die();
-        }
-        else
-        {
             if(!$this->hasOutputHeader)
             {
                 $return= "\xEF\xBB\xBF"; // UTF-8 BOM
@@ -122,14 +103,19 @@ class exportTripleSDataWriter extends Writer {
             foreach($values as $key=>$value)
             {
                 $sColumn=$aColumns[$key];
-                $aValues[]=$key.$sColumn."|";
-
+                if($this->pluginSettings['debugMode']>2)
+                {
+                        $aValues[]=$sColumn."|";
+                }
                 $aValues[]=$this->tripleSgetValue($value,$sColumn);
+                if($this->pluginSettings['debugMode']>2)
+                {
+                        $aValues[]="-";
+                }
             }
-            //~ die();
 
             echo implode($aValues)."\n";
-        }
+
     }
     private function tripleSgetValue($sValue,$sColumn)
     {
@@ -155,35 +141,7 @@ class exportTripleSDataWriter extends Writer {
             return "";
         }
     }
-    //~ protected function transformResponseValue($sValue, $fieldType, FormattingOptions $oOptions, $sColumn = null)
-    //~ {
-        //~ if($sColumn && isset($this->customFieldmap[$sColumn]))
-        //~ {
-            //~ if($this->pluginSettings['debugMode']>=4){
-                //~ return array('column'=>$sColumn,'value'=>$sValue,'triples'=>$this->customFieldmap[$sColumn]);
-            //~ }
-            //~ $return="";// Some column need 2 function
-            //~ if(!$this->hasOutputHeader)
-            //~ {
-                //~ $return= "\xEF\xBB\xBF"; // UTF-8 BOM
-                //~ $this->hasOutputHeader=true;
-            //~ }
-            //~ foreach($this->customFieldmap[$sColumn] as $aTripleS)
-            //~ {
-                //~ 
-                //~ if(isset($aTripleS['@attributes']['type']))
-                //~ {
-                    //~ $function = "getValue".$aTripleS['@attributes']['type'];
-                    //~ $return.=$this->$function($sValue,$aTripleS);
-                //~ }
-            //~ }
-            //~ return $return;
-        //~ }
-        //~ else
-        //~ {
-            //~ return "";
-        //~ }
-    //~ }
+
     public function close()
     {
         fclose($this->handle);
@@ -191,21 +149,35 @@ class exportTripleSDataWriter extends Writer {
 
     private function getValueCharacter($sValue,$aTriplesField)
     {
-        $iSize=$aTriplesField['size'];
-        //$sValue=$sValue;
-        if($this->pluginSettings['stringAnsi']=="ansi")
+        if($aTriplesField['info']['type']=="D")
         {
-            $sValue = iconv('UTF-8','ASCII//TRANSLIT',$sValue); 
+            if(is_null($sValue))
+                return str_repeat (" ",strlen("YYYY-MM-DD HH:ii:ss"));
+            $oDate = new DateTime($sValue);
+            return $oDate->format("Y-m-d H:i:s");
         }
+        $iSize=$aTriplesField['size'];
         if(is_null($sValue))
             return str_repeat (" ",$iSize); 
-        $sValue=self::filterStringForTripleS($sValue);
-        
-        return self::mb_str_pad(mb_substr($sValue,0,$iSize),$iSize," ",STR_PAD_RIGHT);
+        //$sValue=$sValue;
+
+        $sValue=self::filterStringForTripleS($sValue,$this->pluginSettings['stringAnsi']=="ansi");
+        if($this->pluginSettings['stringAnsi']=="ansi")
+        {
+            return str_pad(substr($sValue,0,$iSize),$iSize," ",STR_PAD_RIGHT);
+        }
+        return self::mb_str_pad(mb_substr($sValue,0,$iSize),$iSize," ",STR_PAD_RIGHT,'UTF8');
 
     }
     private function getValueQuantity($sValue,$aTriplesField)
     {
+        if($aTriplesField['info']['type']=="D")
+        {
+            if(is_null($sValue))
+                return str_repeat (" ",8+6);
+            $oDate = new DateTime($sValue);
+            return $oDate->format("YmdHis");
+        }
         $sMin=$aTriplesField['values']['range']['@attributes']['from'];
         $sMax=$aTriplesField['values']['range']['@attributes']['to'];
         $iSize=max(strlen($sMin),strlen($sMax));
@@ -248,7 +220,11 @@ class exportTripleSDataWriter extends Writer {
         $iSize=$iFinish-$iStart+1;
         if(is_null($sValue))
             return str_repeat (" ",$iSize);
-        // Fix value not in array ?
+        if(isset($aTriplesField['info']['replace']))
+        {
+            $sValue=isset($aTriplesField['info']['replace'][$sValue]) ? $aTriplesField['info']['replace'][$sValue] : "";
+        }
+        // else test if code exist
         if($sValue=="" && $iSize>=strlen($this->pluginSettings['listChoiceNoANswer']))
             $sValue=$this->pluginSettings['listChoiceNoANswer'];
         return str_pad($sValue,$iSize," ");
@@ -280,8 +256,12 @@ class exportTripleSDataWriter extends Writer {
      * @param string $string to filter
      * @return string filtered string
      */
-    private static function filterStringForTripleS($string)
+    public static function filterStringForTripleS($string,$bAnsi=false)
     {
+        if($bAnsi)
+        {
+            $string = iconv('UTF-8','ASCII//TRANSLIT',$string); 
+        }
         if (version_compare(substr(PCRE_VERSION,0,strpos(PCRE_VERSION,' ')),'7.0')>-1)
            return preg_replace(array('~\R~u'),array(' '), $string);
         return preg_replace("/[\n\r]/"," ",$string);

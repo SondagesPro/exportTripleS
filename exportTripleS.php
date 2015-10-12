@@ -3,9 +3,9 @@
  * exportTripleS Plugin for LimeSurvey
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2015 Denis Chenu <http://sondages.pro>
  * @license GPL v3
- * @version 0.9
+ * @version 2.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,28 +20,86 @@
  */
 class exportTripleS extends PluginBase {
     protected $storage = 'DbStorage';
-    static protected $name = 'Export Triple S 1.1';
-    static protected $description = 'Export result to Triple-S XML Version 2.0, with fixed column for data.';
+    static protected $name = 'Export Triple S 2.0';
+    static protected $description = 'Export result to Triple-S XML Version 2.0 and 1.2, with fixed column for data.';
     
+    private $demo=false;
     protected $settings = array(
+
+        'XMLversion'=>array(
+            'type'=>'select',
+            'label'=>"sss XML version",
+            'options'=>array(
+                '2'=>'XML version 2',
+                '1.2'=>'XML version 1.2',
+            ),
+            'default'=>'2',
+            'help'=>'Data exported is always exported in dat format',
+        ),
 
         'listDocumentation'=>array(
             'type'=>'info',
-            'content'=>"<div class='alert alert-info'><dl><dt>For list of choice</dt><dd>You can set a specific string for No answer code (différent from not seeing).</dd><dd>If length of this string is up at default question type length (or is empty) : No answer don't have specific code.</dd></dl></div>",
+            'content'=>"<div class='alert alert-info'><dl><dt>For list of choice</dt><dd>This settings is using for single choice question and Array of single choice question type.</dd></dl></div>",
         ),
         'listChoiceNoANswer'=>array(
             'type'=>'string',
-            'label'=>'Remplacer les sans réponses par le code',
+            'label'=>'Replace no answer by code',
             'default'=>"",
+            'htmlOtions'=>array(
+              'maxlength'=>5,
+            ),
+            'help'=>'Set a specific string for `No answer code` (different from not see because hidden by releance or don’t get to this step).',
+        ),
+        'listChoiceReplace'=>array(
+            'type'=>'select',
+            'label'=>'Use numeric code for list of choice',
+            'options'=>array(
+                'code'=>'Use real code',
+                'order'=>'Order of the answers (Default for XML 1.2)',
+                'replace'=>'Removing non numeric character from code',
+            ),
+            'default'=>"code",
+            'help' => 'Only XML2 accept alphanumeric character, XML1.2 can use the order of the answer or removing all non numeric character',
+        ),
+        'listChoiceOther'=>array(
+            'type'=>'int',
+            'label'=>'With Removing non numeric character: Replace other by ',
+            'default'=>"99999",
+            
+        ),
+        'listChoiceLabel'=>array(
+            'type'=>'select',
+            'label'=>'Add the real code before the label',
+            'options'=>array(
+                'yes'=>'Yes',
+                'no'=>'No',
+            ),
+            'default'=>"no",
+            'help' => 'If you use order or replace for code, it can be interesting to have the real code somewhere',
+        ),
+
+        'multipleDocumentation'=>array(
+            'type'=>'info',
+            'content'=>"<div class='alert alert-info'><dl><dt>For multiple choice</dt><dd>You can export other on mutiple in 2 column : one logical and one text.</dd></dl></div>",
+        ),
+        'multipleOtherExport'=>array(
+            'type'=>'select',
+            'label'=>"Export other in multiple ",
+            'options'=>array(
+                '2col'=>'2 column : 1 logical + 1 caracter',
+                '1col'=>'Only caracter column',
+            ),
+            'default'=>'2col',
         ),
 
         'stringDocumentation'=>array(
             'type'=>'info',
-            'content'=>"<div class='alert alert-info'><dl><dt>Pour les valeurs textes</dt><dd>Les valeurs indiquées donnent la taille minium,</dd><dd> la taille finale sera le minimum entre celle ci et la taille réelle en base de données.</dd></dl></div>",
+            'content'=>"<div class='alert alert-info'><dl><dt>For text value</dt><dd>Value set the minimum,</dd><dd> final size are the miniumum betwwen this size and the real data in the database.</dd></dl></div>",
         ),
         'stringAnsi'=>array(
             'type'=>'select',
             'label'=>"Export user text in ANSI (else UTF-8)",
+            'help'=>"Some tools don't import correctly UTF-8 fixed width, use ANSI remove all accent from the data.",
             'options'=>array(
                 'utf8'=>'Export in utf-8',
                 'ansi'=>'Force ANSI',
@@ -50,73 +108,88 @@ class exportTripleS extends PluginBase {
         ),
         'stringMin'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum des exports de type texte par défaut",
+            'label'=>"Minimal size for text by default",
             'default'=>255,
         ),
         'stringMin_short'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum de l’export des questions de type texte court",
+            'label'=>"Minimal size for Short free text question type",
             'default'=>40,
         ),
         'stringMin_long'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum de l’export des questions de type texte long",
+            'label'=>"Minimal size for Long free text question type",
             'default'=>255,
         ),
         'stringMin_huge'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum de l’export des questions de type texte très long",
+            'label'=>"Minimal size for Huge free text question type",
             'default'=>255,
         ),
         'stringMin_multiple'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum de l’export des questions de type multiple texte",
+            'label'=>"Minimal size for Multiple short text question type",
             'default'=>255,
         ),
         'stringMin_array'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum de l’export des questions de type tableau de  texte",
+            'label'=>"Minimal size for Array (Texts) question type",
             'default'=>40,
         ),
         'stringMin_equation'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum de l’export des réponses de type équation",
+            'label'=>"Minimal size for Equation question type",
             'default'=>40,
         ),
         'stringMin_other'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum de l’export des réponses de type autres",
+            'label'=>"Minimal size for answers Other type",
             'default'=>40,
         ),
         'stringMin_comment'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum de l’export des réponses de type commentaires",
+            'label'=>"Minimal size for answers Comment type",
             'default'=>40,
         ),
         'stringMin_url'=>array(
             'type'=>'int',
-            'label'=>"Taille minimum de l’export de l'url référente",
+            'label'=>"Minimal size for referrer URL",
             'default'=>40,
         ),
 
         'numericDocumentation'=>array(
             'type'=>'info',
-            'content'=>"<div class='alert alert-info'><dl> <dt>Pour les valeurs numériques</dt><dd>Vous pouvez utiliser les valeurs minimum et valeurs maximum pour fixer les valeurs minimums et maximum.</dd><dd> Pour fixer le nombre de chiffres après la virgule, utiliser le . (point). Par exemple '0.' en minimum donneras un entier.Attention : 0.0 en minimum et 10.99 en max donneras 1 décimal au maximum</dd></div>",
+            'content'=>"<div class='alert alert-info'><dl> <dt>For numeric value</dt><dd>You can set minimum and maximum to fix the minimum and maximum value.</dd><dd>To fix the number of decimal places, use the dot inside the minimum. For exemple, to always set an integer : use '0.', even is the value is not an integer. .Attention : 0.0 at minimum and 10.99 at maximum give only 1 decimal, only the minimal settings is controlled.</dd><dt>Attention:</dt><dd>Numerci value in the DataBase of LimeSurvey have 30 digits and 10 decimals.</dd></dl></div>",
+        ),
+        'numericIntLength'=>array(
+            'type'=>'int',
+            'label'=>'Number of digits for numeric value.',
+            'min'=>1,
+            'max'=>30,
+            'default'=>30,
+        ),
+        'numericDecLength'=>array(
+            'type'=>'int',
+            'label'=>'Number of decimals (by default) for numeric value.',
+            'min'=>1,
+            'max'=>10,
+            'default'=>10,
         ),
 
-        //~ 'datetimeDocumentation'=>array(
-            //~ 'type'=>'info',
-            //~ 'content'=>"<div class='alert alert-info'><dl> <dt>Pour les valeurs Date + time</dt><dd>Type d'export pour les date time, le défaut est d'utiliser les formats date et time, vous pouvez choisir de les exporter en character.</dd></dl></div>",
-        //~ ),
-        //~ 'datetimeExport'=>array(
-            //~ 'type'=>'select',
-            //~ 'label'=>"Export DATETIME en ",
-            //~ 'options'=>array(
-                //~ 'date'=>'date + time',
-                //~ 'character'=>'character in 2 columns (8+4)',
-            //~ ),
-            //~ 'default'=>'date',
-        //~ ),
+        'datetimeDocumentation'=>array(
+            'type'=>'info',
+            'content'=>"<div class='alert alert-info'><dl> <dt>For Date/time value</dt><dd>Default is to export a date column and a time column with TripleS XML2. You can choose character for XML2 or number. WIth XML 1.2 : only character and number can be used.</dd></dl></div>",
+        ),
+        'datetimeExport'=>array(
+            'type'=>'select',
+            'label'=>"Export DATETIME en ",
+            'options'=>array(
+                'date'=>'date + time',
+                'character'=>'character in 1 column (default for XML 1.2)',
+                'number'=>'number in 1 column (14 number))',
+            ),
+            'default'=>'date',
+        ),
 
         
         'debugDocumentation'=>array(
@@ -146,9 +219,24 @@ class exportTripleS extends PluginBase {
 
             unset($this->settings['debugDocumentation']);
         }
+        if($this->demo)
+        {
+          unset($this->settings['debugDocumentation']);
+          unset($this->settings['debugMode']);
+        }
         $this->subscribe('listExportPlugins');
         $this->subscribe('listExportOptions');
         $this->subscribe('newExport');
+        if($this->demo)
+          $this->subscribe('beforeDeactivate');
+    }
+
+    public function beforeDeactivate()
+    {
+        $this->getEvent()->set('success', false);
+
+        // Optionally set a custom error message.
+        $this->getEvent()->set('message', gT('This plugin can not be disabled in this website.'));
     }
 
     public function listExportOptions()
@@ -159,6 +247,8 @@ class exportTripleS extends PluginBase {
         switch ($type) {
             case 'triples-syntax':
                 $event->set('label', gT("Triple-S XML Syntax"));
+                if($this->demo)
+                  $event->set('default', true);
                 break;
             case 'triples-data':
             default:
@@ -190,6 +280,16 @@ class exportTripleS extends PluginBase {
             $default=isset($this->settings[$name]['default'])?$this->settings[$name]['default']:NULL;
             $value = $this->get($name,null,null,$default);
             $pluginSettings[$name]=$value;
+        }
+        if($this->demo)
+          $pluginSettings['debugMode']=0;
+        // Fix datetimeExport : can't fix in public get ?
+        if($pluginSettings['XMLversion']<2)
+        {
+            if(!in_array($pluginSettings['datetimeExport'],array('character','number')))
+                $pluginSettings['datetimeExport']='character';
+            if(!in_array($pluginSettings['listChoiceReplace'],array('order','replace')))
+                $pluginSettings['listChoiceReplace']='order';
         }
         switch ($type) {
             case 'triples-syntax':

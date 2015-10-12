@@ -4,9 +4,9 @@
  * Writer for the plugin
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2015 Denis Chenu <http://sondages.pro>
  * @license GPL v3
- * @version 0.9
+ * @version 2.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 Yii::import('application.helpers.admin.export.*');
 class exportTripleSSyntaxWriter extends Writer {
     const APPNAME = 'exportTripleS';
-    const VERSION = '1.0';
+    const VERSION = '2.0';
     private $output;
     private $separator;
     private $hasOutputHeader;
@@ -49,17 +49,28 @@ class exportTripleSSyntaxWriter extends Writer {
         foreach($settings as $name => $value)
             $this->pluginSettings[$name]=$value;
 
-        if (function_exists('iconv'))
-        {
-            @setlocale(LC_ALL, 'en_US.UTF8');
-        }
     }
 
     public function init(\SurveyObj $oSurvey, $sLanguageCode, \FormattingOptions $oOptions) {
         parent::init($oSurvey, $sLanguageCode, $oOptions);
         $this->iSurveyId=$oSurvey->id;
+        // Fix surveyls_title : oSurvey is for default lang 
+        if($sLanguageCode!=$oSurvey->info['language'])
+        {
+          $aAvailableLanguage=explode(" ",$oSurvey->info['additional_languages']);
+          if(!in_array($sLanguageCode,$aAvailableLanguage))
+          {
+            $sLanguageCode=$oSurvey->info['language'];
+          }
+        }
         $this->sLanguageCode=$sLanguageCode;
-        $this->sSurveyTitle=self::filterText($oSurvey->info['surveyls_title']);
+        $oLanguageSurvey=SurveyLanguageSetting::model()->find("surveyls_survey_id=:sid and surveyls_language=:language",array(":sid"=>$oSurvey->id,":language"=>$sLanguageCode));
+        if($oLanguageSurvey)
+          $sSurveyTitle=$oLanguageSurvey->surveyls_title;
+        else
+          $sSurveyTitle=$oSurvey->info['surveyls_title'];
+
+        $this->sSurveyTitle=self::filterText($sSurveyTitle);
 
         $now=date("Ymd-His");
         $oOptions->headingFormat = "full";      // force to use own code
@@ -69,6 +80,7 @@ class exportTripleSSyntaxWriter extends Writer {
         $tripleSfunction->iSurveyId=$this->iSurveyId;
         $tripleSfunction->sLanguageCode=$this->sLanguageCode;
         $this->customFieldmap = $tripleSfunction->createTripleSFieldmap($oSurvey, $sLanguageCode, $oOptions);
+
         if ($oOptions->output == 'display')
         {
             if(!$this->pluginSettings['debugMode'])
@@ -99,12 +111,31 @@ class exportTripleSSyntaxWriter extends Writer {
 
     public function close()
     {
-        $sss=array(
-            '@attributes' => array(
+        if($this->pluginSettings['XMLversion']>1.2)
+        {
+            $aAttributes=array(
                 'version' => '2.0',
                 'languages'=>$this->languageCode,
                 'modes'=>'interview',
-            ),
+            );
+            $aRecordAttributes=array(
+                'ident' => 'D',
+                'format'=>'fixed',
+                'skip'=>"0",
+            );
+        }
+        else
+        {
+            $aAttributes=array(
+                'version' => '1.2',
+                'languages'=>$this->languageCode,
+            );
+            $aRecordAttributes=array(
+                'ident' => 'D',
+            );
+        }
+        $sss=array(
+            '@attributes' => $aAttributes,
             'date'=>date("Y-m-d"),
             'time'=>date("H:i:s"),
             'origin'=>'LimeSurvey '.App()->getConfig('versionnumber')." - build:".App()->getConfig('buildnumber')." - ".self::APPNAME." ".self::VERSION,
@@ -113,11 +144,7 @@ class exportTripleSSyntaxWriter extends Writer {
                 'name'=>'sid'.$this->iSurveyId,
                 'title'=>$this->sSurveyTitle,
                 'record'=>array(
-                    '@attributes' => array(
-                        'ident' => 'D',
-                        'format'=>'fixed',
-                        'skip'=>"0",
-                    ),
+                    '@attributes' => $aRecordAttributes,
                     'variable'=>array(
                         // Fill by $this->customFieldmap
                     ),
@@ -125,9 +152,23 @@ class exportTripleSSyntaxWriter extends Writer {
             ),
         );
          foreach ($this->customFieldmap as $key => $aTripleSarray) {
-                $sss['survey']['record']['variable']=array_merge($sss['survey']['record']['variable'],$aTripleSarray);
+            foreach($aTripleSarray as $aTripleS)
+            {
+                if(isset($aTripleS['@attributes']['type']) && $this->pluginSettings['debugMode']<4)
+                {
+                    // Unset invalid variable in XML
+                    if($this->pluginSettings['debugMode']<2)
+                    {
+                        unset($aTripleS['datasize']);
+                        unset($aTripleS['info']);
+                    }elseif($this->pluginSettings['debugMode']<=4){
+                        unset($aTripleS['info']['fieldInfo']);
+                    }
+                    $sss['survey']['record']['variable'][]=$aTripleS;
+                }
+            }
+            //~ $sss['survey']['record']['variable']=array_merge($sss['survey']['record']['variable'],$aTripleSarray);
          }
-
         Yii::import('exportTripleS.third_party.Array2XML');
         $xml = Array2XML::createXML('sss', $sss);
         $this->out($xml->saveXML());
