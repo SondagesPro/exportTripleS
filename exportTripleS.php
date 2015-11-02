@@ -24,6 +24,7 @@ class exportTripleS extends PluginBase {
     static protected $description = 'Export result to Triple-S XML Version 2.0 and 1.2, with fixed column for data.';
     
     private $demo=false;
+    private $devel=false;
     protected $settings = array(
 
         'XMLversion'=>array(
@@ -219,7 +220,7 @@ class exportTripleS extends PluginBase {
 
             unset($this->settings['debugDocumentation']);
         }
-        if($this->demo)
+        if(!$this->devel || $this->demo)
         {
           unset($this->settings['debugDocumentation']);
           unset($this->settings['debugMode']);
@@ -281,7 +282,7 @@ class exportTripleS extends PluginBase {
             $value = $this->get($name,null,null,$default);
             $pluginSettings[$name]=$value;
         }
-        if($this->demo)
+        if(!$this->devel || $this->demo)
           $pluginSettings['debugMode']=0;
         // Fix datetimeExport : can't fix in public get ?
         if($pluginSettings['XMLversion']<2)
