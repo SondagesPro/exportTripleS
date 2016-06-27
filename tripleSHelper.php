@@ -11,14 +11,14 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  */
- class tripleSHelper 
+ class tripleSHelper
 {
     /* The plugin settings */
     public $pluginSettings;
@@ -26,6 +26,7 @@
     public $sLanguageCode;
 
     private $ident=1;
+    private $position=0;
 
     /*return functionName to call for fieldtype : syntax and data */
     public $aTypeFunction=array(
@@ -109,13 +110,13 @@
         }
         return $aTripleSFields;
     }
-    
+
     /*
      * Return the unique name for the triple-S format
-     * 
+     *
      * @param object $oSurvey the survey
      * @param array $aField the field in LimeSurvey format
-     * 
+     *
      * @return string final name
      */
     private function getName($oSurvey,$aField)
@@ -127,7 +128,7 @@
             $sName=iconv('UTF-8', 'ASCII//TRANSLIT', $sName);
         }
         $sName=preg_replace('/[^_a-zA-Z0-9]/','', $sName);
-        
+
         if(!ctype_alpha($sName[0])){
             $sName="Q.".$sName;
         }
@@ -468,7 +469,7 @@
      * @param array key is code, label as value
      * @param size of the code
      * @param force as order
-     * 
+     *
      * @return array for XML writer
      */
     public function getList($aValues,$iSize=5,$bOrder=false)
@@ -486,7 +487,7 @@
         {
             foreach($aValues as $key=>$aValue)
             {
-                
+
                 $aValues[$key]=array(
                     '@attributes'=>$aValue['@attributes'],
                     '@value'=>$aValue['@attributes']['code'].". ".$aValue['@value'],
@@ -822,7 +823,7 @@
         );
         $sType=isset($aTypes[$sType]) ? $aTypes[$sType] : $sType ;
         $minSize=isset($this->pluginSettings['stringMin_'.$sType]) ? $this->pluginSettings['stringMin_'.$sType] : $this->pluginSettings['stringMin'];
-        
+
         // TODO : fix LENGTH for msSQL ?
         $lengthReal = Yii::app()->db->createCommand()
         ->select('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')')
@@ -830,7 +831,7 @@
         ->order('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
         ->limit(1)
         ->queryScalar();
-        
+
         return max((int)$minSize,(int)$lengthReal);
     }
 
@@ -956,7 +957,7 @@
 
     /*
      * Filter string : no tag and no line feed
-     * 
+     *
      * @param string $string to filter
      * @return string filtered string
      */
