@@ -2,7 +2,7 @@
 
 A LimeSurvey plugin to export data and syntax in Triple-S <http://www.triple-s.org/> format.
 
-- Triple S XML2 
+- Triple S XML2
 - DAT data file
 
 ## Installation
@@ -24,5 +24,5 @@ Online documentation : <http://extensions.sondages.pro/triple-s-export/documenta
 
 ## Home page & Copyright
 - HomePage <http://extensions.sondages.pro/triple-s-export>
-- Copyright © 2015 Denis Chenu <http://sondages.pro>
-- Release under GNU General Public License v3 and after licence. See COPYRIGHT.md
+- Copyright © 2015-2016 Denis Chenu <http://sondages.pro>
+- Release under GNU Affero General Public License v3 and after licence.

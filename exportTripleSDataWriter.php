@@ -4,15 +4,15 @@
  * Writer for the plugin
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014-2015 Denis Chenu <http://sondages.pro>
- * @license GPL v3
- * @version 2.0
+ * @copyright 2014-2016 Denis Chenu <http://sondages.pro>
+ * @license AGPL v3
+ * @version 2.0.1
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the Affero GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -52,7 +52,7 @@ class exportTripleSDataWriter extends Writer {
         parent::init($oSurvey, $sLanguageCode, $oOptions);
         //$this->oSurvey=$oSurvey;
         $this->iSurveyId=$oSurvey->id;
-        $this->sLanguageCode=$sLanguageCode; 
+        $this->sLanguageCode=$sLanguageCode;
 
         $now=date("Ymd-His");
         $oOptions->headingFormat = "full";      // force to use own code
@@ -158,7 +158,7 @@ class exportTripleSDataWriter extends Writer {
         }
         $iSize=$aTriplesField['size'];
         if(is_null($sValue))
-            return str_repeat (" ",$iSize); 
+            return str_repeat (" ",$iSize);
         //$sValue=$sValue;
 
         $sValue=self::filterStringForTripleS($sValue,$this->pluginSettings['stringAnsi']=="ansi");
@@ -252,7 +252,7 @@ class exportTripleSDataWriter extends Writer {
 
     /*
      * Filter string : no line feed
-     * 
+     *
      * @param string $string to filter
      * @return string filtered string
      */
@@ -260,7 +260,7 @@ class exportTripleSDataWriter extends Writer {
     {
         if($bAnsi)
         {
-            $string = iconv('UTF-8','ASCII//TRANSLIT',$string); 
+            $string = iconv('UTF-8','ASCII//TRANSLIT',$string);
         }
         if (version_compare(substr(PCRE_VERSION,0,strpos(PCRE_VERSION,' ')),'7.0')>-1)
            return preg_replace(array('~\R~u'),array(' '), $string);

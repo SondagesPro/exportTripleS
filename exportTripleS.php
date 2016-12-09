@@ -3,15 +3,15 @@
  * exportTripleS Plugin for LimeSurvey
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014-2015 Denis Chenu <http://sondages.pro>
- * @license GPL v3
- * @version 2.0
+ * @copyright 2014-2016 Denis Chenu <http://sondages.pro>
+ * @license AGPL v3
+ * @version 2.0.1
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under the terms of the Affero GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -22,7 +22,7 @@ class exportTripleS extends PluginBase {
     protected $storage = 'DbStorage';
     static protected $name = 'Export Triple S 2.0';
     static protected $description = 'Export result to Triple-S XML Version 2.0 and 1.2, with fixed column for data.';
-    
+
     private $demo=false;
     private $devel=false;
     protected $settings = array(
@@ -66,7 +66,7 @@ class exportTripleS extends PluginBase {
             'type'=>'int',
             'label'=>'With Removing non numeric character: Replace other by ',
             'default'=>"99999",
-            
+
         ),
         'listChoiceLabel'=>array(
             'type'=>'select',
@@ -192,7 +192,7 @@ class exportTripleS extends PluginBase {
             'default'=>'date',
         ),
 
-        
+
         'debugDocumentation'=>array(
             'type'=>'info',
             'content'=>"<div class='alert alert-info'><strong>Information de debug</strong><dl> <dt>Basique</dt><dd>Ajoute dans l'export sss une colonne pour tous les types de question. Permet la compatibilité du fichier.</dd><dt>Avancé</dt><dd>Visualisation du fichier et pas export, casse le fichier triple-s (ajoute trop d’information)</dd><dt>Complete</dt><dd>Export les données visuellement sous forme de tableau.</dd></dt></dl></div>",
@@ -235,8 +235,6 @@ class exportTripleS extends PluginBase {
     public function beforeDeactivate()
     {
         $this->getEvent()->set('success', false);
-
-        // Optionally set a custom error message.
         $this->getEvent()->set('message', gT('This plugin can not be disabled in this website.'));
     }
 
@@ -265,7 +263,7 @@ class exportTripleS extends PluginBase {
     {
         $event = $this->getEvent();
         $exports = $event->get('exportplugins');
-        
+
         $exports['triples-syntax'] = get_class();
         $exports['triples-data'] = get_class();
         $event->set('exportplugins', $exports);
