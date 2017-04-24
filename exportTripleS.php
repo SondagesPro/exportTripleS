@@ -3,12 +3,12 @@
  * exportTripleS Plugin for LimeSurvey
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014-2016 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2017 Denis Chenu <http://sondages.pro>
  * @license AGPL v3
- * @version 2.0.1
+ * @version 2.0.2
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the Affero GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
@@ -235,6 +235,8 @@ class exportTripleS extends PluginBase {
     public function beforeDeactivate()
     {
         $this->getEvent()->set('success', false);
+
+        // Optionally set a custom error message.
         $this->getEvent()->set('message', gT('This plugin can not be disabled in this website.'));
     }
 
@@ -307,8 +309,7 @@ class exportTripleS extends PluginBase {
     {
         foreach ($settings as $setting=>$aSetting)
         {
-            if($this->settings[$setting]['type']=='int')
-            {
+            if($this->settings[$setting]['type']=='int') {
                 $settings[$setting]=(int)$settings[$setting];
                 if($settings[$setting]<0 && isset($this->settings[$setting]['default']))
                     $settings[$setting]=$this->settings[$setting]['default'];

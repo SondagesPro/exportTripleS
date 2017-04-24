@@ -3,12 +3,12 @@
  * exportTripleS Plugin for LimeSurvey
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014-2016 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2017 Denis Chenu <http://sondages.pro>
  * @license AGPL v3
- * @version 2.0.1
+ * @version 2.0.2
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the Affero GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *

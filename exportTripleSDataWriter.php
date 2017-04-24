@@ -4,12 +4,12 @@
  * Writer for the plugin
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014-2016 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2017 Denis Chenu <http://sondages.pro>
  * @license AGPL v3
- * @version 2.0.1
+ * @version 2.0.2
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the Affero GNU General Public License as published by
+ * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
@@ -151,15 +151,23 @@ class exportTripleSDataWriter extends Writer {
     {
         if($aTriplesField['info']['type']=="D")
         {
-            if(is_null($sValue))
-                return str_repeat (" ",strlen("YYYY-MM-DD HH:ii:ss"));
+            $numCar=strlen("YYYY-MM-DD HH:ii:ss");
+            if(is_null($sValue)) {
+                return str_repeat (" ",$numCar);
+            }
+            if(strlen($sValue)<$numCar) {
+                return str_repeat (" ",$numCar); /* invalid date */
+            }
             $oDate = new DateTime($sValue);
-            return $oDate->format("Y-m-d H:i:s");
+            if($oDate->format("Y-m-d H:i:s")==substr($sValue,0,$numCar)) {
+                return $oDate->format("Y-m-d H:i:s");
+            }
+            return str_repeat(" ",$numCar); /* invalid date */
         }
         $iSize=$aTriplesField['size'];
-        if(is_null($sValue))
+        if(is_null($sValue)) {
             return str_repeat (" ",$iSize);
-        //$sValue=$sValue;
+        }
 
         $sValue=self::filterStringForTripleS($sValue,$this->pluginSettings['stringAnsi']=="ansi");
         if($this->pluginSettings['stringAnsi']=="ansi")
@@ -218,35 +226,58 @@ class exportTripleSDataWriter extends Writer {
         $iStart=intval($aTriplesField['position']['@attributes']['start']);
         $iFinish=intval($aTriplesField['position']['@attributes']['finish']);
         $iSize=$iFinish-$iStart+1;
-        if(is_null($sValue))
+        if(is_null($sValue)) {
             return str_repeat (" ",$iSize);
+        }
         if(isset($aTriplesField['info']['replace']))
         {
             $sValue=isset($aTriplesField['info']['replace'][$sValue]) ? $aTriplesField['info']['replace'][$sValue] : "";
         }
         // else test if code exist
-        if($sValue=="" && $iSize>=strlen($this->pluginSettings['listChoiceNoANswer']))
+        if($sValue=="" && $iSize>=strlen($this->pluginSettings['listChoiceNoANswer'])) {
             $sValue=$this->pluginSettings['listChoiceNoANswer'];
+        }
         return str_pad($sValue,$iSize," ");
     }
+    /**
+     * return date part of SQL date-time
+     * @param $sValue
+     * @param $aTriplesField
+     * @retrun string
+     */
     private function getValueDate($sValue,$aTriplesField)
     {
-        if(is_null($sValue))
-            return str_repeat (" ",8); // Not sure for this one : non set for missing datetime in TripleS book
+        if(is_null($sValue) || strlen($sValue)<10) {
+            return str_repeat (" ",8); /* Not sure for this one : non set for missing datetime in TripleS book */
+        }
+        if(strlen($sValue)<10) {
+            return str_repeat (" ",8); /* invalid date */
+        }
         $oDate = new DateTime($sValue);
-        return $oDate->format("Ymd");
+        if($oDate->format("Y-m-d")==substr($sValue,0,10)) {
+            return $oDate->format("Ymd");
+        }
+        return str_repeat (" ",8); /* invalid date */
     }
     private function getValueTime($sValue,$aTriplesField)
     {
-        if(is_null($sValue))
+        if(is_null($sValue)) {
             return str_repeat (" ",4); // Not sure for this one : non set for missing datetime in TripleS book
+        }
+        if(strlen($sValue)<19) {
+            return str_repeat (" ",4); /* invalid time */
+        }
         $oDate = new DateTime($sValue);
-        return $oDate->format("Hi");
+        if($oDate->format("H:i:s")==substr($sValue,11,19)) {
+            return $oDate->format("Hi");
+        }
+        return str_repeat (" ",4); /* invalid time */
     }
     private function getValueLogical($sValue,$aTriplesField)
     {
-        if(is_null($sValue))
+        if(is_null($sValue)) {
             return " ";
+        }
         return (int)(bool)$sValue;
     }
 

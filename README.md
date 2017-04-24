@@ -24,5 +24,5 @@ Online documentation : <http://extensions.sondages.pro/triple-s-export/documenta
 
 ## Home page & Copyright
 - HomePage <http://extensions.sondages.pro/triple-s-export>
-- Copyright © 2015-2016 Denis Chenu <http://sondages.pro>
+- Copyright © 2015-2017 Denis Chenu <http://sondages.pro>
 - Release under GNU Affero General Public License v3 and after licence.
