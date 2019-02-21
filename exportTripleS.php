@@ -3,9 +3,9 @@
  * exportTripleS Plugin for LimeSurvey
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014-2017 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2019 Denis Chenu <http://sondages.pro>
  * @license AGPL v3
- * @version 2.0.2
+ * @version 3.0.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -23,8 +23,8 @@ class exportTripleS extends PluginBase {
     static protected $name = 'Export Triple S 2.0';
     static protected $description = 'Export result to Triple-S XML Version 2.0 and 1.2, with fixed column for data.';
 
-    private $demo=false;
-    private $devel=false;
+    private $demo = false;
+    private $devel = false;
     protected $settings = array(
 
         'XMLversion'=>array(
@@ -160,7 +160,7 @@ class exportTripleS extends PluginBase {
 
         'numericDocumentation'=>array(
             'type'=>'info',
-            'content'=>"<div class='alert alert-info'><dl> <dt>For numeric value</dt><dd>You can set minimum and maximum to fix the minimum and maximum value.</dd><dd>To fix the number of decimal places, use the dot inside the minimum. For exemple, to always set an integer : use '0.', even is the value is not an integer. .Attention : 0.0 at minimum and 10.99 at maximum give only 1 decimal, only the minimal settings is controlled.</dd><dt>Attention:</dt><dd>Numerci value in the DataBase of LimeSurvey have 30 digits and 10 decimals.</dd></dl></div>",
+            'content'=>"<div class='alert alert-info'><dl> <dt>For numeric value</dt><dd>You can set minimum and maximum to fix the minimum and maximum value.</dd><dd>To fix the number of decimal places, use the dot inside the minimum. For exemple, to always set an integer : use '0.', even is the value is not an integer. .Attention : 0.0 at minimum and 10.99 at maximum give only 1 decimal, only the minimal settings is controlled.</dd><dt>Attention:</dt><dd>Numeric value in the DataBase of LimeSurvey have 30 digits and 10 decimals.</dd></dl></div>",
         ),
         'numericIntLength'=>array(
             'type'=>'int',
@@ -210,8 +210,7 @@ class exportTripleS extends PluginBase {
         ),
     );
 
-    public function __construct(PluginManager $manager, $id) {
-        parent::__construct($manager, $id);
+    public function init() {
         if((Yii::app()->getConfig("buildnumber") && intval(Yii::app()->getConfig("buildnumber"))<140703))
         {
             unset($this->settings['listDocumentation']);
@@ -228,8 +227,9 @@ class exportTripleS extends PluginBase {
         $this->subscribe('listExportPlugins');
         $this->subscribe('listExportOptions');
         $this->subscribe('newExport');
-        if($this->demo)
+        if($this->demo) {
           $this->subscribe('beforeDeactivate');
+        }
     }
 
     public function beforeDeactivate()
