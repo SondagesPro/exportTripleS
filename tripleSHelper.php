@@ -3,9 +3,9 @@
  * exportTripleS Plugin for LimeSurvey
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014-2017 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2020 Denis Chenu <http://sondages.pro>
  * @license AGPL v3
- * @version 2.0.2
+ * @version 2.0.3
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -824,11 +824,11 @@
         $sType=isset($aTypes[$sType]) ? $aTypes[$sType] : $sType ;
         $minSize=isset($this->pluginSettings['stringMin_'.$sType]) ? $this->pluginSettings['stringMin_'.$sType] : $this->pluginSettings['stringMin'];
 
-        // TODO : fix LENGTH for msSQL ?
+        $LENGTH = self::getLENGTHfunction();
         $lengthReal = Yii::app()->db->createCommand()
-        ->select('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')')
+        ->select($LENGTH.'('.Yii::app()->db->quoteColumnName($sColumn).')')
         ->from("{{survey_".$this->iSurveyId."}}")
-        ->order('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
+        ->order($LENGTH.'('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
         ->limit(1)
         ->queryScalar();
 
@@ -838,8 +838,10 @@
     public function stringTokenSize($sColumn)
     {
         static $oSchema;
-        if(!$oSchema);
-            $oSchema= Token::model($this->iSurveyId)->getMetaData()->columns;
+        if(!$oSchema) {
+            $oSchema = Token::model($this->iSurveyId)->getMetaData()->columns;
+        }
+        $LENGTH = self::getLENGTHfunction();
         if(isset($oSchema[$sColumn]))
         {
             switch ($oSchema[$sColumn]->type)
@@ -851,9 +853,9 @@
                     {
                         $baseSize=$this->pluginSettings['stringMin'];
                         $lengthReal = Yii::app()->db->createCommand()
-                        ->select('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')')
+                        ->select('('.Yii::app()->db->quoteColumnName($sColumn).')')
                         ->from("{{tokens_".$this->iSurveyId."}}")
-                        ->order('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
+                        ->order($LENGTH.'('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
                         ->limit(1)
                         ->queryScalar();
                         $iSize= max((int)$baseSize,(int)$lengthReal);
@@ -880,9 +882,9 @@
                 default:
                     $baseSize=$this->pluginSettings['stringMin'];
                     $lengthReal = Yii::app()->db->createCommand()
-                    ->select('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')')
+                    ->select($LENGTH.'('.Yii::app()->db->quoteColumnName($sColumn).')')
                     ->from("{{tokens_".$this->iSurveyId."}}")
-                    ->order('LENGTH('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
+                    ->order($LENGTH.'('.Yii::app()->db->quoteColumnName($sColumn).')  DESC')
                     ->limit(1)
                     ->queryScalar();
                     $iSize= max((int)$baseSize,(int)$lengthReal);
@@ -965,7 +967,21 @@
     {
         if (version_compare(substr(PCRE_VERSION,0,strpos(PCRE_VERSION,' ')),'7.0')>-1)
            return preg_replace(array('~\R~u'),array(' '), strip_tags(trim($string)));
-        return preg_replace("/[\n\r]/"," ",strip_tags(trim($string)));    }
+        return preg_replace("/[\n\r]/"," ",strip_tags(trim($string)));
+    }
+
+    /*
+     * Return $LENGTH function according to DB
+     * @return string 
+     */
+    public static function getLENGTHfunction()
+    {
+        $LENGTH = 'LENGTH'
+        if (in_array(App()->db->driverName, array('sqlsrv', 'dblib', 'mssql')) {
+            $LENGTH = 'LEN'
+        }
+        return $LENGTH;
+    }
 
 }
 
