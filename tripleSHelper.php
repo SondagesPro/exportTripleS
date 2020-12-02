@@ -976,9 +976,9 @@
      */
     public static function getLENGTHfunction()
     {
-        $LENGTH = 'LENGTH'
-        if (in_array(App()->db->driverName, array('sqlsrv', 'dblib', 'mssql')) {
-            $LENGTH = 'LEN'
+        $LENGTH = 'LENGTH';
+        if (in_array(App()->db->driverName, array('sqlsrv', 'dblib', 'mssql'))) {
+            $LENGTH = 'LEN';
         }
         return $LENGTH;
     }
