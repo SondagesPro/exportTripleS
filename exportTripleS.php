@@ -5,7 +5,7 @@
  * @author Denis Chenu <denis@sondages.pro>
  * @copyright 2014-2019 Denis Chenu <http://sondages.pro>
  * @license AGPL v3
- * @version 3.0.0
+ * @version 3.0.1
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -234,14 +234,19 @@ class exportTripleS extends PluginBase {
 
     public function beforeDeactivate()
     {
+        if (!$this->getEvent()) {
+            throw new CHttpException(403);
+        }
         $this->getEvent()->set('success', false);
-
         // Optionally set a custom error message.
         $this->getEvent()->set('message', gT('This plugin can not be disabled in this website.'));
     }
 
     public function listExportOptions()
     {
+        if (!$this->getEvent()) {
+            throw new CHttpException(403);
+        }
         $event = $this->getEvent();
         $type = $event->get('type');
 
@@ -263,6 +268,9 @@ class exportTripleS extends PluginBase {
     */
     public function listExportPlugins()
     {
+        if (!$this->getEvent()) {
+            throw new CHttpException(403);
+        }
         $event = $this->getEvent();
         $exports = $event->get('exportplugins');
 
@@ -272,6 +280,9 @@ class exportTripleS extends PluginBase {
     }
     public function newExport()
     {
+        if (!$this->getEvent()) {
+            throw new CHttpException(403);
+        }
         $event = $this->getEvent();
         $type = $event->get('type');
 
@@ -307,6 +318,9 @@ class exportTripleS extends PluginBase {
 
     public function saveSettings($settings)
     {
+        if(!Permission::model()->hasGlobalPermission('settings','update')) {
+            throw new CHttpException(403);
+        }
         foreach ($settings as $setting=>$aSetting)
         {
             if($this->settings[$setting]['type']=='int') {
