@@ -3,9 +3,9 @@
  * exportTripleS Plugin for LimeSurvey
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014-2023 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2020 Denis Chenu <http://sondages.pro>
  * @license AGPL v3
- * @version 3.1.0
+ * @version 2.0.3
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -436,24 +436,18 @@
         else
             $scale=0;
 
-        $aoAnswers = Answer::model()->with('answerl10ns')->findAll(
-            'qid=:qid AND language=:language and scale_id=:scale',
-            array(':qid'=>$aField['qid'],':language'=>$this->sLanguageCode,':scale'=>$scale)
-        );
+        $aoAnswers = Answer::model()->findAll('qid=:qid AND language=:language and scale_id=:scale', array(':qid'=>$aField['qid'],':language'=>$this->sLanguageCode,':scale'=>$scale));
+
         foreach($aoAnswers as $oAnswer)
         {
-            $answertext = "";
-            if (isset($aoAnswers->answerl10ns[$this->sLanguageCode]->answer)) {
-                $answertext = $aoAnswers->answerl10ns[$this->sLanguageCode]->answer;
-            }
             $aValue[]=array(
                 '@attributes'=>array(
                     'code'=>$oAnswer->code,
                 ),
-                '@value'=>self::filterTextForXML($answertext),
+                '@value'=>self::filterTextForXML($oAnswer->answer),
             );
         }
-        $oQuestion=Question::model()->find('qid=:qid', array(':qid'=>$aField['qid']));
+        $oQuestion=Question::model()->find('qid=:qid AND language=:language', array(':qid'=>$aField['qid'],':language'=>$this->sLanguageCode));
         if($oQuestion->other=='Y')
         {
             $oQuestionOtherText=QuestionAttribute::model()->find('qid=:qid AND language=:language AND attribute =:attribute', array(':qid'=>$aField['qid'],':language'=>$this->sLanguageCode,':attribute'=>'other_replace_text'));

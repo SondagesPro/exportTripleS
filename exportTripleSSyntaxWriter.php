@@ -4,9 +4,9 @@
  * Writer for the plugin
  *
  * @author Denis Chenu <denis@sondages.pro>
- * @copyright 2014-2017 Denis Chenu <http://sondages.pro>
+ * @copyright 2014-2023 Denis Chenu <http://sondages.pro>
  * @license AGPL v3
- * @version 2.0.2
+ * @version 3.1.0
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -45,7 +45,11 @@ class exportTripleSSyntaxWriter extends Writer {
         $this->separator = ',';
         $this->hasOutputHeader = false;
         $basedir=dirname(__FILE__); // this will give you the / directory
-        Yii::setPathOfAlias('exportTripleS', $basedir);
+        if (intval(App()->getConfig('versionnumber')) < 4) {
+            Yii::setPathOfAlias('exportTripleS', $basedir . DIRECTORY_SEPARATOR . 'legacy');
+        } else {
+            Yii::setPathOfAlias('exportTripleS', $basedir);
+        }
         foreach($settings as $name => $value)
             $this->pluginSettings[$name]=$value;
 
